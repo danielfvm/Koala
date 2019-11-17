@@ -3,7 +3,7 @@ exit (state) {
     jump 1000000000;
 }
 
-O: "-- A small example program, written in Fraser --\n\n";
+O: "-- A small example program, written in Koala --\n\n";
 
 var x = 0;
 var y = 0;

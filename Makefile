@@ -5,13 +5,13 @@ build:
 	gcc -c src/multisearcher.c -o obj/multisearcher.o
 	gcc -c src/interpreter.c -o obj/interpreter.o
 	gcc -c src/compiler.c -o obj/compiler.o
-	gcc obj/main.o obj/gnumber.o obj/multisearcher.o obj/compiler.o obj/interpreter.o -o bin/frei
+	gcc obj/main.o obj/gnumber.o obj/multisearcher.o obj/compiler.o obj/interpreter.o -o bin/koala
 
 run:
-	./bin/frei
+	./bin/koala
 
 clean:
 	rm -rf obj
 
 install:
-	sudo cp bin/frei /usr/bin/frei
+	sudo cp bin/koala /usr/bin/koala
