@@ -38,7 +38,7 @@ int main (int argc, char** argv)
 {
     fr_compiler_init ();
 
-    fr_compile (read_file ("examples/example.frs"));
+    fr_compile (read_file ("examples/example.frs"), 0);
 
     fr_compiler_run ();
 

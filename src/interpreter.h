@@ -62,13 +62,11 @@ typedef struct
 {
     byte   reg_type;
     Value* reg_values;
-    
-    byte  mem_data_type;
-    void* mem_value;
 } Register;
 
 typedef Register* Registry;
 
+typedef Value Memory;
 
 void fr_register_create (Registry** register_list);
 
@@ -129,11 +127,11 @@ Register* REGISTER_JMP (Value position);
 Register* REGISTER_OUT (Value m_index);
 
 
-void* fr_get_memory (const Registry* register_list, Value value);
+void* fr_get_memory (Value value);
 
-void fr_set_memory (const Registry* register_list, Value* value, void* new_value);
+void fr_set_memory (Value value, void* new_value);
 
-byte fr_get_data_type (const Registry* register_list, Value value);
+byte fr_get_data_type (Value value);
 
 int fr_run (const Registry* register_list);
 

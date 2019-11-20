@@ -240,8 +240,10 @@ void fr_compiler_run ()
 }
 
 // Here the code will be compiled into a list of registers -> ´register_list´
-int fr_compile (const char* code)
+int fr_compile (const char* code, Variable* variables, const size_t pre_variable_count)
 {
+    size_t variable_count = pre_variable_count;
+
     CmsTemplate* cms_template_pre;
     CmsTemplate* cms_template;
 
@@ -427,6 +429,12 @@ int fr_compile (const char* code)
 
     // Search syntax using ´cms_template´ in ´example_text´
     cms_find (code, cms_template);
+
+    // Free alloc memory
+    for (int i = pre_variable_count - 1; i >= variable_count; -- i)
+    {
+        fr_register_add (REGISTER_FREE (VALUE_INT (i)));
+    }
 
     return EXIT_SUCCESS;
 }
