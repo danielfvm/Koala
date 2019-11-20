@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+
 #include "multisearcher.h"
 #include "interpreter.h"
 #include "gnumber.h"
@@ -38,7 +39,17 @@ int main (int argc, char** argv)
 {
     fr_compiler_init ();
 
-    fr_compile (read_file ("examples/example.frs"), 0);
+    Variable* variables = malloc (sizeof (Variable));
+
+    if (!variables)
+    {
+        fprintf (stderr, "Failed to create list ´variables´ (Main)\n");
+        return EXIT_FAILURE;
+    }
+
+    char* code = read_file ("examples/test.frs");
+
+    fr_compile (code, variables, 0);
 
     fr_compiler_run ();
 

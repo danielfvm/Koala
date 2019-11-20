@@ -413,7 +413,7 @@ float gna_calculation (const char* calc)
 
 
 
-void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t* size)
+void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t* size, Value (*fr_convert_to_value) (char*))
 {
     size_t calc_len = strlen(calc);
     size_t array_i  = 0;
@@ -426,7 +426,6 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
     for (i = 0, *size = 1; i < strlen (calc); ++ i)
         if (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/')
             *size += 2;
-//    printf ("<>%d\n", *size);
 
     // Allocate memory to array containing values
     (*array) = malloc (sizeof (Value) * (*size));
@@ -458,13 +457,13 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
     (*array)[array_i ++] = fr_convert_to_value (_substr (calc, last_i, i));
 }
 
-Value gna_registry_calculation_simple (Registry** register_list, const char* calc)
+Value gna_registry_calculation_simple (Registry** register_list, const char* calc, Value (*fr_convert_to_value) (char*), size_t (*var_add) (char*))
 {
     size_t i, j, size;
     Value* array;
 
     // Converts cstring to an float array
-    _gna_conv_to_registry_calculation (&array, calc, &size);
+    _gna_conv_to_registry_calculation (&array, calc, &size, fr_convert_to_value);
 
     bool has_found_term = 0;
     int  alloc_value    = 0;
@@ -482,7 +481,8 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
 
         if (!has_found_term)
         {
-            alloc_value = fr_register_add (register_list, REGISTER_ALLOC (array[i - 1]));
+            alloc_value = var_add("");
+            fr_register_add (register_list, REGISTER_ALLOC (array[i - 1]));
             array[i - 1] = POINTER (alloc_value);
             has_found_term = 1;
         }
@@ -505,18 +505,19 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
 
 
     // Store first value as result -> Simpler to calculate with
-    size_t m_pos = fr_register_add (register_list, REGISTER_ALLOC (array[0]));
+    size_t m_pos = var_add("");
+    fr_register_add (register_list, REGISTER_ALLOC (array[0].value)); // TODO: CREATE NEW ONE!!!
 
     // Sum of all values in float array
-    for (i = 1; i < size; i += 2)
+ /*   for (i = 1; i < size; i += 2)
     {
         if ((intptr_t)array[i].value == '+')
             fr_register_add (register_list, REGISTER_ADD (VALUE_INT (m_pos), array[i + 1]));
         else
             fr_register_add (register_list, REGISTER_SUB (VALUE_INT (m_pos), array[i + 1]));
     }
-
+*/
     free (array);
-    
+
     return POINTER (m_pos);
 }
