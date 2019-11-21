@@ -482,7 +482,7 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
         if (!has_found_term)
         {
             alloc_value = var_add("");
-            fr_register_add (register_list, REGISTER_ALLOC (array[i - 1]));
+            fr_register_add (register_list, REGISTER_ALLOC (VALUE_INT (alloc_value), array[i - 1]));
             array[i - 1] = POINTER (alloc_value);
             has_found_term = 1;
         }
@@ -506,17 +506,17 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
 
     // Store first value as result -> Simpler to calculate with
     size_t m_pos = var_add("");
-    fr_register_add (register_list, REGISTER_ALLOC (array[0].value)); // TODO: CREATE NEW ONE!!!
+    fr_register_add (register_list, REGISTER_ALLOC (VALUE_INT (m_pos), array[0]));
 
     // Sum of all values in float array
- /*   for (i = 1; i < size; i += 2)
+    for (i = 1; i < size; i += 2)
     {
         if ((intptr_t)array[i].value == '+')
             fr_register_add (register_list, REGISTER_ADD (VALUE_INT (m_pos), array[i + 1]));
         else
             fr_register_add (register_list, REGISTER_SUB (VALUE_INT (m_pos), array[i + 1]));
     }
-*/
+
     free (array);
 
     return POINTER (m_pos);

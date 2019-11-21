@@ -45,9 +45,9 @@ enum DataType
 
 enum ValueType
 {
-    VALUE_VALUE   = -2,
-    VALUE_POINTER = -1,
- // VALUE_INDEX   >= 0
+    VALUE_TYPE_VALUE   = -2,
+    VALUE_TYPE_POINTER = -1,
+ // VALUE_TYPE_INDEX   >= 0
 };
 
 
@@ -91,8 +91,10 @@ Value VALUE_INT (int value);
 
 Value VALUE_FLOAT (float value);
 
+Value VALUE_VALUE (Value value);
 
-Register* REGISTER_ALLOC (Value m_value);
+
+Register* REGISTER_ALLOC (Value m_index, Value m_value);
 
 Register* REGISTER_ADD (Value m_index, Value m_add);
 

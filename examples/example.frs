@@ -1,1 +1,5 @@
-O: "Hello World!";
+test () {
+    O: "Called test!\n";
+}
+
+test ();

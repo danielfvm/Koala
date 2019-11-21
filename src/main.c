@@ -10,27 +10,25 @@
 
 char* read_file (const char* filepath)
 {
+    char* buffer;
     FILE* file;
-    char* buffer = 0;
-    int length;
+    size_t len;
 
+    
     if ((file = fopen (filepath, "r")) == NULL)
-        return NULL;
-
-    fseek (file, 0, SEEK_END);
-    length = ftell (file);
-    fseek (file, 0, SEEK_SET);
-    buffer = malloc (length);
-
-    if (!buffer)
     {
-        fprintf (stderr, "Failed loading buffer in ´read_file´\n");
-        return NULL;
+        fprintf (stderr, "Failed to open file ´%s´\n", filepath);
+        exit (EXIT_FAILURE);
     }
 
-    fread (buffer, 1, length, file);
+    buffer = NULL;
+    ssize_t bytes_read = getdelim( &buffer, &len, '\0', file);
 
-    fclose (file);
+    if (bytes_read == -1)
+    {
+        fprintf (stderr, "Failed to read file ´%s´\n", filepath);
+        exit (EXIT_FAILURE);
+    }
 
     return buffer;
 }
@@ -47,7 +45,7 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    char* code = read_file ("examples/test.frs");
+    char* code = read_file ("examples/example.frs");
 
     fr_compile (code, variables, 0);
 

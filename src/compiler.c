@@ -173,7 +173,7 @@ int fr_compile (const char* code, Variable* variables, const size_t pre_variable
             exit (EXIT_FAILURE);
         }
 
-        printf ("Alloc %s at %d!\n", name, variable_count);
+        // printf ("Alloc %s at %d!\n", name, variable_count);
 
         variables[variable_count].position = variable_count; 
         variables[variable_count].name = name; 
@@ -249,8 +249,8 @@ int fr_compile (const char* code, Variable* variables, const size_t pre_variable
 
     void c_alloc (CmsData* data, int size)
     {
-        fr_register_add (&register_list, REGISTER_ALLOC (fr_convert_to_value (data[1])));
-        var_add (data[0]);
+        size_t m_index = var_add (data[0]);
+        fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), fr_convert_to_value (data[1])));
     }
 
     void c_realloc (CmsData* data, int size)
@@ -261,8 +261,8 @@ int fr_compile (const char* code, Variable* variables, const size_t pre_variable
 
     void c_clabel (CmsData* data, int size)
     {
-        fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (fr_get_current_register_position(&register_list))));
-        var_add (data[0]);
+        size_t m_index = var_add (data[0]);
+        fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), VALUE_INT (fr_get_current_register_position(&register_list))));
     }
 
     void c_jlabel (CmsData* data, int size)
@@ -363,26 +363,28 @@ int fr_compile (const char* code, Variable* variables, const size_t pre_variable
         // split arguments of function
         size_t length = split (data[1], ',', &args);
 
+        size_t m_index;
+
         // recieved parameters
         for (int i = length - 1; i >= 0; -- i) 
         {
             var_name = malloc (strlen (data[0]) + strlen (args[i]) + 1);
             strcpy (var_name, data[0]);
             strcat (var_name, args[i]);
-            var_add (var_name);
-            fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+            m_index = var_add (var_name);
+            fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), VALUE_INT (0)));
         }
 
         // first default argument, ´__origin__´ used to determine where to go back
         var_loc = malloc (strlen (data[0]) + 10  + 1);
         strcpy (var_loc, data[0]);
         strcat (var_loc, "__origin__");
-        var_add (var_loc);
-        fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+        m_index = var_add (var_loc);
+        fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), VALUE_INT (0)));
 
         // Allocate memory for function position
-        var_add (data[0]);
-        fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (fr_get_current_register_position(&register_list)+2)));
+        m_index = var_add (data[0]);
+        fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), VALUE_INT (fr_get_current_register_position(&register_list)+2)));
 
         // Jump to end of functions body, will not happen if function is called
         size_t x = fr_register_add (&register_list, REGISTER_JMP (VALUE_INT (0)));
@@ -399,7 +401,7 @@ int fr_compile (const char* code, Variable* variables, const size_t pre_variable
 
     void c_call (CmsData* data, int size)
     {
-        char** args;
+/*        char** args;
         size_t length = split (data[1], ',', &args);
         Value position = fr_convert_to_value (data[0]); 
 
@@ -412,7 +414,7 @@ int fr_compile (const char* code, Variable* variables, const size_t pre_variable
 
         // Calling jump
         fr_register_add (&register_list, REGISTER_JMP (position));
-    }
+  */  }
 
     cms_create ( &cms_template, CMS_LIST ( {
         cms_add ("$ ( % ) { % }", c_function, CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);

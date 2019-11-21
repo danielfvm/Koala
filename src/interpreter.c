@@ -45,7 +45,7 @@ size_t fr_get_current_register_position (Registry** register_list)
 
 Value POINTER (int m_pointer)
 {
-    return (Value) { DT_POINTER, VALUE_POINTER, (void*)(intptr_t) m_pointer };
+    return (Value) { DT_POINTER, VALUE_TYPE_POINTER, (void*)(intptr_t) m_pointer };
 }
 
 Value INDEX (int m_pointer, int index)
@@ -55,35 +55,41 @@ Value INDEX (int m_pointer, int index)
 
 Value VALUE (byte data_type, void* value)
 {
-    return (Value) { data_type, VALUE_VALUE, value };
+    return (Value) { data_type, VALUE_TYPE_VALUE, value };
 }
 
 Value VALUE_STR (void* value)
 {
-    return (Value) { DT_STRING, VALUE_VALUE, value };
+    return (Value) { DT_STRING, VALUE_TYPE_VALUE, value };
 }
 
 Value VALUE_CHAR (char value)
 {
-    return (Value) { DT_CHAR, VALUE_VALUE, (void*)(intptr_t) value };
+    return (Value) { DT_CHAR, VALUE_TYPE_VALUE, (void*)(intptr_t) value };
 }
 
 Value VALUE_INT (int value)
 {
-    return (Value) { DT_INT, VALUE_VALUE, (void*)(intptr_t) value };
+    return (Value) { DT_INT, VALUE_TYPE_VALUE, (void*)(intptr_t) value };
 }
 
 Value VALUE_FLOAT (float value)
 {
-    return (Value) { DT_FLOAT, VALUE_VALUE, (void*)(long long)(value * FLOAT_CONV_VALUE) };
+    return (Value) { DT_FLOAT, VALUE_TYPE_VALUE, (void*)(long long)(value * FLOAT_CONV_VALUE) };
 }
 
-Register* REGISTER_ALLOC (Value m_value)
+Value VALUE_VALUE (Value value)
+{
+    return (Value) { value.data_type, value.index, value.value };
+}
+
+Register* REGISTER_ALLOC (Value m_index, Value m_value)
 {
     Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values);
+    reg->reg_values = malloc (sizeof *reg->reg_values * 2);
     reg->reg_type   = ALLOC;
-    reg->reg_values[0] = m_value;
+    reg->reg_values[0] = m_index;
+    reg->reg_values[1] = m_value;
     return reg;
 }
 
@@ -250,11 +256,16 @@ Register* REGISTER_OUT (Value m_index)
 
 Memory* memories;
 
+Value fr_get_memory_value (Value value)
+{
+    if (value.index == VALUE_TYPE_VALUE)
+        return value;
+    return memories[(intptr_t) value.value];
+}
+
 void* fr_get_memory (Value value)
 {
-    if (value.index == VALUE_VALUE)
-        return value.value;
-    return memories[(intptr_t) value.value].value;
+    return fr_get_memory_value (value).value;
 }
 
 void fr_set_memory (Value value, void* new_value)
@@ -264,7 +275,7 @@ void fr_set_memory (Value value, void* new_value)
 
 byte fr_get_data_type (Value value)
 {
-    if (value.index == VALUE_VALUE)
+    if (value.index == VALUE_TYPE_VALUE)
         return value.data_type;
     return memories[(intptr_t) value.value].data_type;
 }
@@ -297,8 +308,15 @@ int fr_run (const Registry* register_list)
         {
             case ALLOC:
             {
-                memories[m_index ++] = reg->reg_values[0];
-                memories = realloc (memories, sizeof (Memory) * (m_index + 1));
+                if (m_index > (intptr_t) fr_get_memory (reg->reg_values[0]))
+                {
+                    fr_set_memory (reg->reg_values[0], fr_get_memory (reg->reg_values[1]));
+                }
+                else
+                {
+                    memories[m_index ++] = fr_get_memory_value (reg->reg_values[1]);
+                    memories = realloc (memories, sizeof (Memory) * (m_index + 1));
+                }
                 continue;
             }
             case SET:
