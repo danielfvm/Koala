@@ -321,9 +321,7 @@ int fr_run (const Registry* register_list)
             }
             case SET:
             {
-                intptr_t m_value     = (intptr_t) fr_get_memory (reg->reg_values[0]);
-                intptr_t m_value_set = (intptr_t) fr_get_memory (reg->reg_values[1]);
-                memories[(intptr_t) fr_get_memory (reg->reg_values[0])].value     = (void*) m_value_set;
+                memories[(intptr_t) fr_get_memory (reg->reg_values[0])].value     = fr_get_memory (reg->reg_values[1]);
                 memories[(intptr_t) fr_get_memory (reg->reg_values[0])].data_type = fr_get_data_type (reg->reg_values[1]);
                 continue;
             }

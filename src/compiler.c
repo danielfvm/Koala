@@ -15,8 +15,30 @@ void trim (char** text)
         (*text) ++;
 
     // Trim end
-    for (unsigned int len = strlen (*text) - 1; (*text)[len] <= ' '; -- len)
+    for (size_t len = strlen (*text) - 1; (*text)[len] <= ' '; -- len)
         (*text)[len] = '\0';
+}
+
+void ctrim (char** text)
+{
+    size_t i, j;
+    for (i = 0; (*text)[i] != '\0'; ++ i)
+    {
+        if ((*text)[i] <= ' ')
+        {
+            for (j = i + 1; (*text)[j] != '\0'; ++ j)
+                (*text)[j - 1] = (*text)[j];
+            (*text)[j - 1] = '\0';
+        }
+    }
+}
+
+size_t contains (char* text, char c)
+{
+    for (size_t i = 0; text[i] != '\0'; ++ i)
+        if (text[i] == c)
+            return i + 1;
+    return 0;
 }
 
 // Splits a string with a given delim saved in a *string passed as reference
@@ -360,23 +382,44 @@ int fr_compile (const char* code, Variable* variables, const size_t pre_variable
         char*  var_name;
         char*  var_loc;
 
+        // argument length
+        size_t length = 0;
+
         // split arguments of function
-        size_t length = split (data[1], ',', &args);
+        if (((char*)data[1])[0] != '\0')
+            length = split (data[1], ',', &args);
 
         size_t m_index;
 
         // recieved parameters
         for (int i = length - 1; i >= 0; -- i) 
         {
-            var_name = malloc (strlen (data[0]) + strlen (args[i]) + 1);
-            strcpy (var_name, data[0]);
-            strcat (var_name, args[i]);
-            m_index = var_add (var_name);
-            fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), VALUE_INT (0)));
+            // trim spaces
+            ctrim (&args[i]);
+
+            // check if contains an ´=´
+            size_t equal_pos;
+            if (equal_pos = contains (args[i], '='))
+            {
+                args[i][equal_pos - 1] = '\0';
+                var_name = malloc (strlen (data[0]) + equal_pos);
+                strcpy (var_name, data[0]);
+                strcat (var_name, args[i]);
+                m_index = var_add (var_name);
+                fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), fr_convert_to_value (args[i] + equal_pos - 1)));
+            }
+            else
+            {
+                var_name = malloc (strlen (data[0]) + strlen (args[i]) + 1);
+                strcpy (var_name, data[0]);
+                strcat (var_name, args[i]);
+                m_index = var_add (var_name);
+                fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), VALUE_INT (0)));
+            }
         }
 
         // first default argument, ´__origin__´ used to determine where to go back
-        var_loc = malloc (strlen (data[0]) + 10  + 1);
+        var_loc = malloc (strlen (data[0]) + 10 + 1); // 10 .. Size of string + 1 .. '\0'
         strcpy (var_loc, data[0]);
         strcat (var_loc, "__origin__");
         m_index = var_add (var_loc);
@@ -384,7 +427,7 @@ int fr_compile (const char* code, Variable* variables, const size_t pre_variable
 
         // Allocate memory for function position
         m_index = var_add (data[0]);
-        fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), VALUE_INT (fr_get_current_register_position(&register_list)+2)));
+        fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), VALUE_INT (fr_get_current_register_position(&register_list) + 2)));
 
         // Jump to end of functions body, will not happen if function is called
         size_t x = fr_register_add (&register_list, REGISTER_JMP (VALUE_INT (0)));
@@ -401,20 +444,25 @@ int fr_compile (const char* code, Variable* variables, const size_t pre_variable
 
     void c_call (CmsData* data, int size)
     {
-/*        char** args;
-        size_t length = split (data[1], ',', &args);
+        char** args;
+        size_t length = 0; 
+
+        if (((char*)data[1])[0] != '\0')
+            length = split (data[1], ',', &args);
+
         Value position = fr_convert_to_value (data[0]); 
+        size_t m_index = var_get_pos_by_name (data[0]);
 
         // Arguments passed over call
         for (size_t i = 0; i < length; ++ i) 
-            fr_register_add (&register_list, REGISTER_SET (VALUE_INT ((intptr_t)position.value - i - 2), fr_convert_to_value (args[i])));
+            fr_register_add (&register_list, REGISTER_SET (VALUE_INT (m_index - i - 2), fr_convert_to_value (args[i])));
 
         // Argument for location of call ´__origin__´
-        fr_register_add (&register_list, REGISTER_SET (VALUE_INT ((intptr_t)position.value - 1), VALUE_INT (fr_get_current_register_position (&register_list) + length)));
+        fr_register_add (&register_list, REGISTER_SET (VALUE_INT (m_index - 1), VALUE_INT (fr_get_current_register_position (&register_list) + 2)));
 
         // Calling jump
         fr_register_add (&register_list, REGISTER_JMP (position));
-  */  }
+    }
 
     cms_create ( &cms_template, CMS_LIST ( {
         cms_add ("$ ( % ) { % }", c_function, CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
@@ -434,6 +482,7 @@ int fr_compile (const char* code, Variable* variables, const size_t pre_variable
         cms_add ("! $ { % }",   c_ncheck,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("$ { % }",     c_check,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
     } ));
+
     
     // Search syntax using ´cms_template´ in ´example_text´
     cms_find (code, cms_template);

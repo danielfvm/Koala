@@ -1,5 +1,23 @@
-test () {
-    O: "Called test!\n";
+test (x = "Hello", y = "World") {
+    O: "origin is: >", test__origin__, "<\n";
+    O: "value  is: >", testx, "<\n";
+    O: "value2 is: >", testy, "<\n";
 }
 
-test ();
+exit (state) {
+    O: "\nExit state: ", exitstate, '\n';
+    jump 100000000;
+}
+
+example () {
+    O: "---\n";
+    O: "Called example program!\n";
+    O: "---\n";
+    test ("Hello, you beautiful");
+    O: "---\n";
+    test (3, 5);
+    O: "---\n\n";
+}
+
+example ();
+exit ();
