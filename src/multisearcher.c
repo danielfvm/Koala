@@ -18,7 +18,7 @@ void cms_create (CmsTemplate** cms_template, void (cms_template_init) ())
 {
     (*cms_template)       = cms_tmp_template = malloc (sizeof (CmsTemplate));
     (*cms_template)->size = 0;  
-    (*cms_template)->list = NULL;//malloc (sizeof (CmsSearch));
+    (*cms_template)->list = NULL;
 
     // Initialize template, by calling ´cms_add´
     cms_template_init ();
@@ -26,13 +26,6 @@ void cms_create (CmsTemplate** cms_template, void (cms_template_init) ())
     // Reset ´cms_tmp_template´ used in ´cms_add´
     cms_tmp_template = NULL;
 }
-
-/*CmsTemplate* cms_create_ (int size, void (cms_template_init) ())
-{
-    CmsTemplate* cms_template;
-    cms_create (&cms_template, size, cms_template_init);
-    return cms_template;
-}*/
 
 void cms_add (char* syntax, CmsCallback callback, int options)
 {
@@ -54,38 +47,6 @@ void cms_add (char* syntax, CmsCallback callback, int options)
                 cms_tmp_template->list[id].data_size ++;
     }
 }
-
-/*
-void _cms_trim (char** text)
-{
-    // Trim begin
-    while (**text <= ' ')
-        (*text) ++;
-
-    // Trim end
-    for (unsigned int len = strlen (*text) - 1; (*text)[len] <= ' '; -- len)
-        (*text)[len] = '\0';
-}
-
-char* _cms_trim_everything (char* text)
-{
-    int i, size;
-
-    // Finds the size
-    for (i = 0, size = 0; text[i] != '\0'; ++ i)
-        if (text[i] > ' ')
-            size ++;
-
-    char* new_text = malloc (sizeof (char) * size);
-
-    new_text[size] = '\0';
-
-    while ((-- i) >= 0)
-        if (text[i] > ' ')
-            new_text[-- size] = text[i];
-
-    return new_text;
-}*/
 
 int _cms_find_next_bracket (size_t p, const char* text)
 {
@@ -258,7 +219,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                             text_char_i --;
 
                     // Copy ´data_str´ to data array
-                    data[data_i] = malloc (sizeof (char) * strlen (data_str) + 1);
+                    data[data_i] = malloc (strlen (data_str) + 1);
                     data_str[strlen(data_str)] = '\0'; // end character
                     strcpy (data[data_i], data_str);
                     data_i ++;

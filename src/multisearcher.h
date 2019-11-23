@@ -7,11 +7,11 @@ typedef void (*CmsCallback) (CmsData* data, int size);
 
 enum CmsOption
 {
-    CMS_NONE                         = 1 << 0,  // None option selected
-    CMS_IGNORE_UPPER_LOWER_CASE      = 1 << 1,  // Ignores if char is upper or down case
-    CMS_IGNORE_SPACING_LENGTH        = 1 << 2,  // Ignores if there are multiple spaces instead of the given spaces in template
-    CMS_IGNORE_SPACING               = 1 << 3,  // Ignores if there are spaces between text
-    CMS_USE_BRACKET_SEARCH_ALGORITHM = 1 << 4   // Ignores if there are spaces between text
+    CMS_NONE,                           // None option selected
+    CMS_IGNORE_UPPER_LOWER_CASE,        // Ignores if char is upper or down case
+    CMS_IGNORE_SPACING_LENGTH,          // Ignores if there are multiple spaces instead of the given spaces in template
+    CMS_IGNORE_SPACING,                 // Ignores if there are spaces between text
+    CMS_USE_BRACKET_SEARCH_ALGORITHM    // Ignores if there are spaces between text
 };
 
 

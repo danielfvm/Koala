@@ -3,33 +3,30 @@
 
 #include <stdlib.h>
 
-#define ELEMENT(x) ((Element)(x))
 #define FLOAT_CONV_VALUE 1000000.0
 
 typedef unsigned char byte;
 
 enum Execution
 {
-    NONE,   //.
-    ALLOC,  //.
-    OUT,    //.
-    CIN,    //.
-    WRITE,  //
-    READ,   //
-    EQ,     //. ==
-    NEQ,    //. !=
-    BIG,    //. >
-    SMA,    //. <
-    BEQ,    //. >=
-    SEQ,    //. <=
-    JUMP,   //.
-    ADD,    //.
-    SUB,    //.
-    MUL,    //.
-    DIV,    //.
-    FREE,   //.
-    SET,    //.
-    SYS     //.
+    NONE,
+    ALLOC,
+    OUT,
+    CIN,
+    EQ,
+    NEQ,
+    BIG,
+    SMA,
+    BEQ,
+    SEQ,
+    JUMP,
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    FREE,
+    SET,
+    SYS
 };
 
 enum DataType

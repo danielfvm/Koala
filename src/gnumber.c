@@ -12,7 +12,7 @@ char* _substr (const char *src, int m, int n)
     unsigned int i;
 
     // allocate (len + 1) chars for destination (+1 for extra null character)
-    char *dest = malloc (sizeof (char) * (len + 1));
+    char *dest = malloc (len + 1);
 
     // extracts characters between m'th and n'th index from source string
     // and copy them into the destination string
@@ -75,7 +75,7 @@ bool* _gba_conv_calculation (const char* calc, unsigned int* size)
             *size += 2;
 
     // Allocate memory to array containing values
-    bool* array = malloc (sizeof (bool) * (*size));
+    bool* array = malloc (*size);
 
     for (i = 0; i < calc_len; ++ i)
     {
@@ -422,19 +422,43 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
 
     char*  value;
 
+    bool in_string = 0;
+
     // Find maximum element count by searching after computes 
     for (i = 0, *size = 1; i < strlen (calc); ++ i)
-        if (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/')
+    {
+/*
+        // continue if double '\'
+        if (calc[i] == '\\' && i >= 1 && calc[i-1] == '\\' && ++ i)
+            continue;
+
+        if (calc[i] == '"' && (i == 0 || calc[i-1] == '\\'))
+            in_string = !in_string;
+*/
+        if (!in_string && (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/'))
             *size += 2;
+    }
 
     // Allocate memory to array containing values
     (*array) = malloc (sizeof (Value) * (*size));
 
     for (i = 0; i < calc_len; ++ i)
     {
+/*
+        // continue if double '\'
+        if (calc[i] == '\\' && i >= 1 && calc[i-1] == '\\' && ++ i)
+            continue;
+
+        if (calc[i] == '"' && (i == 0 || calc[i-1] == '\\'))
+            in_string = !in_string;
+*/
+
         // Skips at beginning & if it is not a compute
         if ((calc[i] != '+' && calc[i] != '-' && calc[i] != '*' && calc[i] != '/') || i == 0)
             continue;
+
+//        if (in_string)
+//            continue;
 
         value = _substr (calc, last_i, i);
         gna_consider_sign (value);

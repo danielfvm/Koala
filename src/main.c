@@ -47,7 +47,7 @@ int main (int argc, char** argv)
 
     char* code = read_file ("examples/example.frs");
 
-    fr_compile (code, variables, 0);
+    fr_compile (code, &variables, 0);
 
     fr_compiler_run ();
 

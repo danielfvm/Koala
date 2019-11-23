@@ -1,0 +1,39 @@
+test (x = "Hello", y = "World") {
+    O: "origin is: >", test.__origin__, "<\n";
+    O: "value  is: >", test.x, "<\n";
+    O: "value2 is: >", test.y, "<\n";
+}
+
+exit (state) {
+    O: "\nExit state: ", exit.state, '\n';
+    jump 100000000;
+}
+
+example () {
+    O: "---\n";
+    O: "Called example program!\n";
+    O: "---\n";
+    test ();
+    O: "---\n";
+    test (3, 5);
+    O: "---\n\n";
+}
+
+
+hello () {
+    O: "World!\n";
+}
+
+world () {
+    O: "Hello ";
+    var old_origin  = world.__origin__;
+    world.__origin__ = hello;
+    hello.__origin__ = old_origin;
+}
+
+world();
+world();
+
+O: "Goodbye!\n";
+
+exit(1);
