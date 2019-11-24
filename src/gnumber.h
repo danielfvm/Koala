@@ -6,6 +6,8 @@
 
 #include "interpreter.h"
 
+char* _substr (const char* str, int m, int n);
+
 /** Simple calculation with basic computes **/
 bool  gba_calculation_simple (const char* calc);
 

@@ -377,7 +377,6 @@ int fr_run (const Registry* register_list)
                         strcpy (new_value = malloc (strlen (text)), text);
                         free (text);
                     }
-                    free (value);
                 }
                 else
                     new_value = memories[m_value].value + m_value_add;

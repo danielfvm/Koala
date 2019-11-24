@@ -1,10 +1,4 @@
-test (x, y, z = 32) {
-    O: test.x, test.y, test.z, '\n';
-}
+var age = 15;
+var name = "Daniel";
 
-var x = 0;
-
-! (x) {
-    test(3, 6);
-}
-O: "end\n";
+O: "I'm $name and $age years old.\n";

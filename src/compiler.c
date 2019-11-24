@@ -90,11 +90,11 @@ int split (char* buffer, char delim, char*** output)
     for (ptr = buffer, lastPos = buffer; *ptr != '\0'; ++ ptr)
     {
         // Check if char is string
-        if (*ptr == '\"' && *(ptr - 1) != '\\')
+        if (*ptr == '\"' && *(ptr - 1) != '\\' && !inChar)
             inString = !inString;
 
         // Check if char is character
-        if (*ptr == '\'' && *(ptr - 1) != '\\')
+        if (*ptr == '\'' && *(ptr - 1) != '\\' && !inString)
             inChar = !inChar;
 
         // Check if it is the start of a bracket
@@ -203,7 +203,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 {
     size_t variable_count = pre_variable_count;
 
-    CmsTemplate* cms_template_pre;
+//    CmsTemplate* cms_template_pre;
     CmsTemplate* cms_template;
 
     // Returns the index of variable by given name
@@ -247,6 +247,68 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         return variable_count - 1;
     }
 
+    Value create_filled_in_str (char* text)
+    {
+        text = str_replace (str_replace (str_replace (str_replace (text, "\\\\", "$/638$"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\");
+
+        bool   has_variables = 0;
+        size_t m_index, i, j;
+
+        char* varname;
+        char *cvar, *tvar;
+
+        for (i = 0; text[i] != '\0'; ++ i)
+        {
+            // continue if double '\'
+            if (text[i] == '\\' && i >= 1 && text[i-1] == '\\' && ++ i)
+                continue;
+
+            if (text[i] != '$' || !(i == 0 || text[i-1] != '\\'))
+                continue;
+
+            varname = "";
+
+            for (j = 0; j < variable_count; ++ j)
+            {
+                cvar = (*variables)[j].name;
+
+                if (cvar[0] == '\0' || strlen (cvar) > strlen (text + i + 1))
+                    continue;
+                tvar = _substr (text, i + 1, i + 1 + strlen (cvar));
+                if (!strcmp (cvar, tvar) && strlen (varname) < strlen (cvar))
+                    varname = cvar;
+                free (tvar);
+            }
+
+            if (varname[0] == '\0')
+                continue;
+
+            if (!has_variables)
+            {
+                fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index = var_add ("")), VALUE_STR ("")));
+                has_variables = 1;
+            }
+
+            text[i] = '\0';
+
+            fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
+            fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), POINTER (var_get_pos_by_name (varname))));
+
+            text += i + 1 + strlen (varname);
+            i = 0;
+
+            free (varname);
+        }
+
+        if (has_variables)
+        {
+            if (text[0] != '\0')
+                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
+            return POINTER (m_index);
+        }
+        return VALUE_STR (text);
+    }
+
     // Converts a string to ´Value´ supports also different types of Values
     // TODO: Improve system
     Value fr_convert_to_value (char* text)
@@ -259,20 +321,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         {
             text ++; // Remove first ´"´
             text[strlen (text) - 1] = '\0'; // Remove last ´"´
-            char* value_string = str_replace (str_replace (str_replace (str_replace (text, "\\\\", "$/638$"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\");
-            /*
-            for (size_t i = 0; i < variable_count; ++ i)
-            {
-                char* var_name = malloc (strlen((*variables)[i].name) + 1);
-                var_name[0] = '$';
-                var_name[1] = '\0';
-                strcat (var_name, (*variables)[i].name);
-printf ("-->%s<\n", var_name);
-
-                value_string = str_replace (value_string, var_name, "COMMING SOON");
-            }*/
-
-            return VALUE_STR (value_string);
+            return create_filled_in_str(text);
         }
 
         // ´text´ is a ´char´
@@ -280,7 +329,7 @@ printf ("-->%s<\n", var_name);
         {
             text ++; // Remove first ´'´
             text[strlen (text) - 1] = '\0'; // Remove last ´'´
-            return VALUE_CHAR (str_replace (str_replace (str_replace (str_replace (text, "\\\\", "$/638$"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\")[0]);
+            return VALUE_CHAR (str_replace (str_replace (str_replace (str_replace (str_replace (text, "\\\\", "$/638$"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\"), "\\'", "'")[0]);
         }
 
         // ´text´ is a variable and returns value -> ´pointer´
