@@ -11,6 +11,8 @@
 
 #define CMS_CHECK(x, y) ((x & y) == y)
 
+typedef char bool;
+
 // Temporary variable to set ´CmsSearch´ from ´cms_add´
 CmsTemplate* cms_tmp_template;
 
@@ -72,6 +74,10 @@ int _cms_find_next_bracket (size_t p, const char* text)
     // Searching after closing bracket
     for (; p < text_size; ++ p)
     {
+        // Control if this is working!
+        if (text[p] == '\\' && (p >= 1 && text[p-1] != '\\') && ++ p)
+            continue;
+
         if (text[p] == '\"' && (p <= 0 || text[p-1] != '\\'))
             in_string = !in_string;
         if (text[p] == '\'' && (p <= 0 || text[p-1] != '\\'))
@@ -90,6 +96,17 @@ int _cms_find_next_bracket (size_t p, const char* text)
 
     // Closing bracket not found!
     return -1;
+}
+
+bool has_illigal_ascii (const char* text)
+{
+    for (size_t i = 0; text[i] != '\0'; ++ i)
+        if (!((text[i] >= 'a' && text[i] <= 'z') || 
+              (text[i] >= 'A' && text[i] <= 'Z') || 
+              (text[i] >= '0' && text[i] <= '9') ||
+               text[i] == '_' || text[i] == '.'))
+                return 1;
+    return 0;
 }
 
 void cms_find (const char* text, CmsTemplate* cms_template)
@@ -154,7 +171,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                         text_char -= 'A' - 'a';
                 }
 
-                if (template_char == '$' || template_char == '%')
+                if (template_char == '$' || template_char == '#' || template_char == '%')
                 {
                     int new_text_char_i = text_char_i;
 
@@ -164,29 +181,13 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                     // Loop ends at Space, Endl, Tab, ... and at the end of ´test´ => '\0'
                     if (template_char == '$')
                     {
-                        //if ((template_options & CMS_IGNORE_SPACING) == CMS_IGNORE_SPACING && text_char <= ' ')
-                        //    while (text[new_text_char_i] <= ' ')
-                        //        new_text_char_i ++;
-
-                        // TODO: Check if this is a reliable alternative to the uncomment code
-                        // ----> Add ´CMS_IGNORE_SPACING´ & ´CMS_IGNORE_SPACING_LENGTH´ option to it
                         while (text[new_text_char_i] > ' ' && text[new_text_char_i] != template_syntax[i])
                             new_text_char_i ++;
-
-                        /*if ((template_options & CMS_IGNORE_SPACING) == CMS_IGNORE_SPACING)
-                        {
-                            char found_space = 0;
-                            while ((text[new_text_char_i] != template_syntax[i]))
-                            {
-                                if (text[new_text_char_i] <= ' ')
-                                    found_space = 1;
-                                else if (found_space == 1)
-                                    break;
-                                new_text_char_i ++;
-                            }
-                        }
-                        else while (text[new_text_char_i] > ' ' && (text[new_text_char_i] != template_syntax[i]))
-                            new_text_char_i ++;*/
+                    }
+                    else if (template_char == '#')
+                    {
+                        while (text[new_text_char_i] > ' ' && text[new_text_char_i] != template_syntax[i])
+                            new_text_char_i ++;
                     }
                     else if (template_char == '%')
                     {
@@ -207,6 +208,10 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                     for (i = 0; i < size; ++ i)
                         data_str[i] = text[text_char_i + i];
                     data_str[i] = '\0'; // end character
+
+                    // Check if '#' has legall ascii charactors 
+                    if (template_char == '#' && has_illigal_ascii (data_str))
+                        break; 
 
                     // Update ´text_char_i´ to keep on comparing the ´text´ with the given syntax
                     text_char_i = new_text_char_i;

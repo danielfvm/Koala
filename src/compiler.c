@@ -22,14 +22,22 @@ void trim (char** text)
 void ctrim (char** text)
 {
     size_t i, j;
+    bool in_string = 0;
+
     for (i = 0; (*text)[i] != '\0'; ++ i)
     {
-        if ((*text)[i] <= ' ')
-        {
-            for (j = i + 1; (*text)[j] != '\0'; ++ j)
-                (*text)[j - 1] = (*text)[j];
-            (*text)[j - 1] = '\0';
-        }
+        if ((*text)[i] == '\\' && i >= 1 && (*text)[i-1] == '\\' && ++ i)
+            continue;
+
+        if ((*text)[i] == '"' && (i == 0 || (*text)[i-1] != '\\'))
+            in_string = !in_string;
+
+        if ((*text)[i] > ' ' || in_string)
+            continue;
+
+        for (j = i + 1; (*text)[j] != '\0'; ++ j)
+            (*text)[j - 1] = (*text)[j];
+        (*text)[j - 1] = '\0';
     }
 }
 
@@ -113,7 +121,7 @@ int split (char* buffer, char delim, char*** output)
         lastPos = ptr + 1;
 
         // Realloc memory to string -> +1 char
-        (*output) = realloc (*output, partCount + 1);
+        (*output) = realloc (*output, sizeof (char*) * (partCount + 1));
     }
 
     // Set splited substring in output and trim it
@@ -202,7 +210,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     int var_get_pos_by_name (const char* name)
     {
         for (size_t i = 0; i < variable_count; ++ i)
-           if (!strcmp ((*variables)[i].name, name))
+           if ((*variables)[i].name[0] != '\0' && !strcmp ((*variables)[i].name, name))
                 return (*variables)[i].position;
         return -1;
     }
@@ -223,6 +231,20 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         (*variables)[variable_count].position = variable_count; 
         (*variables)[variable_count].name = name; 
         return variable_count ++;
+    }
+
+    // Add new variable to list at given index ´variables´
+    size_t var_add_at (char* name, int index)
+    {
+        if (variable_count == 0)
+            return var_add (name);
+
+        var_add("");
+
+        for (size_t i = variable_count - 1; i > index; -- i)
+            (*variables)[i].name = (*variables)[i-1].name;
+        (*variables)[index].name = name;
+        return variable_count - 1;
     }
 
     // Converts a string to ´Value´ supports also different types of Values
@@ -475,7 +497,6 @@ printf ("-->%s<\n", var_name);
     {
         char** args;
         char*  var_name;
-        char*  var_loc;
 
         // argument length
         size_t length = 0;
@@ -487,41 +508,36 @@ printf ("-->%s<\n", var_name);
         size_t m_index;
         Value  m_value;
 
+        size_t equal_pos;
+       // size_t old_variable_pos = variable_count;
+
         // recieved parameters
+//        for (size_t i = 0; i < length; ++ i) 
         for (int i = length - 1; i >= 0; -- i) 
         {
-            // trim spaces
-            ctrim (&args[i]);
-
             // check if contains an ´=´
-            size_t equal_pos;
             if (equal_pos = contains (args[i], '='))
             {
                 args[i][equal_pos - 1] = '\0';
-                var_name = malloc (strlen (data[0]) + equal_pos + 1);
-                strcpy (var_name, data[0]);
-                strcat (var_name, ".");
-                strcat (var_name, args[i]);
-                m_index = var_add (var_name);
+                sprintf (var_name = malloc (strlen (data[0]) + equal_pos + 1), "%s.%s", data[0], args[i]);
                 m_value = fr_convert_to_value (args[i] + equal_pos - 1);
+                ctrim (&var_name); // trim spaces
+         //       m_index = var_add_at (var_name, old_variable_pos);
+                m_index = var_add (var_name);
                 fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), m_value));
             }
             else
             {
-                var_name = malloc (strlen (data[0]) + strlen (args[i]) + 2);
-                strcpy (var_name, data[0]);
-                strcat (var_name, ".");
-                strcat (var_name, args[i]);
+                sprintf (var_name = malloc (strlen (data[0]) + strlen (args[i]) + 2), "%s.%s", data[0], args[i]);
+           //     m_index = var_add_at (var_name, old_variable_pos);
                 m_index = var_add (var_name);
                 fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), VALUE_INT (0)));
             }
         }
 
         // first default argument, ´__origin__´ used to determine where to go back
-        var_loc = malloc (strlen (data[0]) + 11 + 1); // 11 .. Size of string + 1 .. '\0'
-        strcpy (var_loc, data[0]);
-        strcat (var_loc, ".__origin__");
-        m_index = var_add (var_loc);
+        sprintf (var_name = malloc (strlen (data[0]) + 11 + 1), "%s.__origin__", data[0]);
+        m_index = var_add (var_name);
         fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (m_index), VALUE_INT (-1)));
 
         // Allocate memory for function position
@@ -535,10 +551,12 @@ printf ("-->%s<\n", var_name);
         fr_compile (data[2], variables, variable_count);
 
         // Jump to call position (location of call saved in ´__origin__´)
-        fr_register_add (&register_list, REGISTER_JMP (fr_convert_to_value (var_loc)));
+        fr_register_add (&register_list, REGISTER_JMP (fr_convert_to_value (var_name)));
 
         // Set skip jump to current location of register
         register_list[x]->reg_values[0] = VALUE_INT (fr_get_current_register_position(&register_list));
+
+        free (var_name);
     }
 
     void c_call (CmsData* data, int size)
@@ -564,26 +582,26 @@ printf ("-->%s<\n", var_name);
     }
 
     cms_create ( &cms_template, CMS_LIST ( {
-        cms_add ("$ ( % ) -> { % }",       c_function, CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("$ ( % ) ;",   c_call,    CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("var $ = % ;", c_alloc,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("$ += % ;",    c_add,     CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("$ -= % ;",    c_sub,     CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("$ *= % ;",    c_mul,     CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("$ /= % ;",    c_div,     CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("$ = % ;",     c_realloc, CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# ( % ) { % }",       c_function, CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# ( % ) ;",   c_call,    CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("var # = % ;", c_alloc,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# += % ;",    c_add,     CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# -= % ;",    c_sub,     CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# *= % ;",    c_mul,     CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# /= % ;",    c_div,     CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# = % ;",     c_realloc, CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("O: % ;",      c_print,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("I: % ;",      c_input,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("jump % ;",    c_jlabel,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("$:",          c_clabel,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("#:",          c_clabel,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! ( % ) { % } { % }", c_bracket_ncheck_else,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! ( % ) { % }",       c_bracket_ncheck,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) { % } { % }",   c_bracket_check_else,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) { % }",         c_bracket_check,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! $ { % } { % }",     c_ncheck_else,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! $ { % }",           c_ncheck,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("$ { % } { % }",       c_check_else,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("$ { % }",             c_check,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# { % } { % }",       c_check_else,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# { % }",             c_check,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
     } ));
 
     // Search syntax using ´cms_template´ in ´example_text´

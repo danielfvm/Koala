@@ -1,16 +1,10 @@
-var str = "";
-var i = 'a';
-
-loop:
-
-str += i;
-
-!('z' - i) {
-    O: str, '\n';
-    jump -1;
+test (x, y, z = 32) {
+    O: test.x, test.y, test.z, '\n';
 }
 
-i += 1;
+var x = 0;
 
-
-jump loop;
+! (x) {
+    test(3, 6);
+}
+O: "end\n";

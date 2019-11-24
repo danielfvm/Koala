@@ -1,0 +1,16 @@
+var str = "";
+var i = 'a';
+
+loop:
+
+str += i;
+
+!('z' - i) {
+    O: str, '\n';
+    jump -1;
+}
+
+i += 1;
+
+
+jump loop;
