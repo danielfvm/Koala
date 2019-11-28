@@ -1,0 +1,47 @@
+player (name, x, y) {
+    var health = 3;
+
+    moveTo (x, y) {
+        player.x = moveTo.x;
+        player.y = moveTo.y;
+    }
+
+    isAlive () > alive;
+
+    getName () > player.name;
+
+    setX (x) > player.x = setX.x;
+
+    setY (y) > player.y = setY.y;
+
+    respwan () {
+        O: "$player.name respawned!\n";
+    }
+
+    damage () > alive --;
+
+    update () {
+        damage ();
+    }
+
+    O: "$player.name spawnd!\n";
+
+    return this;
+}
+
+var myPlayer = player ("DanielFvM", 0, 0);
+myPlayer.moveTo (4, 2);
+
+myPlayer > {
+    moveTo (2, 5);
+    moveTo (3, 4);
+    moveTo (4, 2);
+};
+
+loop {
+    (myPlayer.isAlive ()) -> {
+         myPlayer.update ();
+    }
+    O: "$myPlayer.name died!\n";
+}
+
