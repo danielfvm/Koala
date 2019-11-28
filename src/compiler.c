@@ -246,7 +246,8 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         (*variables)[index].name = name;
         return variable_count - 1;
     }
-
+	
+    // Doesn't work with ´\´ and ´\\´
     Value create_filled_in_str (char* text)
     {
         text = str_replace (str_replace (str_replace (str_replace (text, "\\\\", "$/638$"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\");
@@ -296,8 +297,6 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 
             text += i + 1 + strlen (varname);
             i = 0;
-
-            free (varname);
         }
 
         if (has_variables)

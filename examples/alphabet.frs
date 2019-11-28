@@ -1,16 +1,10 @@
-var str = "";
-var i = 'a';
-
-loop:
-
-str += i;
-
-!('z' - i) {
-    O: str, '\n';
-    jump -1;
+add (x, y) {
+	O: "$add.x + $add.y = ", add.x + add.y, '\n';
 }
 
-i += 1;
+var x = 0.0;
+var y = 0.0;
 
+I: &x, &y;
 
-jump loop;
+add (x, y);

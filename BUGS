@@ -1,0 +1,2 @@
+Calling a function in a function causes infinite loop.
+

@@ -1,4 +1,12 @@
-var age = 15;
-var name = "Daniel";
+printf () {
+	O: "o_printf: ", printf.__origin__,"\n";
+}
 
-O: "I'm $name and $age years old.\n";
+
+add () {
+    O: "o_add: ", add.__origin__, "\n";
+    add ();
+}
+
+O: "p_add: ", add, "\n";
+add ();
