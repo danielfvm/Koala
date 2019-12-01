@@ -24,26 +24,29 @@ enum Execution
     SUB,
     MUL,
     DIV,
-    FREE,
     SET,
-    SYS
+    SYS,
+    NEG,
+    PUSH,
+    POP
 };
 
 enum DataType
 {
     DT_NONE,
     DT_POINTER,
+    DT_POINTER_POINTER,
     DT_INT,
     DT_FLOAT,
     DT_CHAR,
-    DT_BOOL,
     DT_STRING
 };
 
 enum ValueType
 {
-    VALUE_TYPE_VALUE   = -2,
-    VALUE_TYPE_POINTER = -1,
+    VALUE_TYPE_VALUE   = -3,
+    VALUE_TYPE_POINTER = -2,
+    VALUE_TYPE_POINTER_POINTER = -1,
  // VALUE_TYPE_INDEX   >= 0
 };
 
@@ -76,6 +79,8 @@ size_t fr_get_current_register_position (Registry** register_list);
 
 Value POINTER (int m_pointer);
 
+Value POINTER_POINTER (int m_pointer);
+
 Value INDEX (int m_pointer, int index);
 
 Value VALUE (byte data_type, void* value);
@@ -91,7 +96,7 @@ Value VALUE_FLOAT (float value);
 Value VALUE_VALUE (Value value);
 
 
-Register* REGISTER_ALLOC (Value m_index, Value m_value);
+Register* REGISTER_ALLOC (Value m_value);
 
 Register* REGISTER_ADD (Value m_index, Value m_add);
 
@@ -119,18 +124,16 @@ Register* REGISTER_BEQ (Value m_value1, Value m_value2, Value not_position);
 
 Register* REGISTER_SEQ (Value m_value1, Value m_value2, Value not_position);
 
-Register* REGISTER_FREE (Value m_index);
-
 Register* REGISTER_JMP (Value position);
 
 Register* REGISTER_OUT (Value m_index);
 
+Register* REGISTER_NEG (Value m_index);
 
-void* fr_get_memory (Value value);
+Register* REGISTER_PUSH (Value m_index);
 
-void fr_set_memory (Value value, void* new_value);
+Register* REGISTER_POP (Value m_index);
 
-byte fr_get_data_type (Value value);
 
 int fr_run (const Registry* register_list);
 

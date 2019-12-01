@@ -13,7 +13,6 @@ char* read_file (const char* filepath)
     char* buffer;
     FILE* file;
     size_t len;
-
     
     if ((file = fopen (filepath, "r")) == NULL)
     {
@@ -22,9 +21,8 @@ char* read_file (const char* filepath)
     }
 
     buffer = NULL;
-    ssize_t bytes_read = getdelim( &buffer, &len, '\0', file);
 
-    if (bytes_read == -1)
+    if (getdelim (&buffer, &len, '\0', file) == -1)
     {
         fprintf (stderr, "Failed to read file ´%s´\n", filepath);
         exit (EXIT_FAILURE);
@@ -37,17 +35,15 @@ int main (int argc, char** argv)
 {
     fr_compiler_init ();
 
-    Variable* variables = malloc (sizeof (Variable));
+    Variable* variables;
 
-    if (!variables)
+    if (!(variables = malloc (sizeof (Variable))))
     {
         fprintf (stderr, "Failed to create list ´variables´ (Main)\n");
         return EXIT_FAILURE;
     }
 
-    char* code = read_file ("examples/example.frs");
-
-    fr_compile (code, &variables, 0);
+    fr_compile (read_file ("examples/example.frs"), &variables, 0);
 
     fr_compiler_run ();
 

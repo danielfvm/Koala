@@ -1,3 +1,4 @@
+#include <stddef.h>
 // #define CMS_CALLBACK(x) ({ void _(CmsData* data, int size) x _; })
 #define CMS_LIST(x)     ({ void _() x; _; })
 
@@ -28,6 +29,8 @@ typedef struct
     unsigned int size;
     CmsSearch*   list;
 } CmsTemplate;
+
+int cms_find_next_bracket (size_t p, const char* text);
 
 /*
  *   Here you can create your own template, which is used in ´cms_find´ as manuel

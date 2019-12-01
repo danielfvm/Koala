@@ -1,12 +1,15 @@
-printf () {
-	O: "o_printf: ", printf.__origin__,"\n";
+# FOUND ERRORS:
+# cannot call same function inside the function -> stack wrong init -> malloc invalid size & Segfault
+# cannot pass function and use it with passed params in same time -> sysmalloc error
+
+add (x, y) > ret add.x + add.y;
+
+call (func, x, y) {
+    var x = call.func (call.x, call.y);
 }
 
+call (add, 2, 2);
 
-add () {
-    O: "o_add: ", add.__origin__, "\n";
-    add ();
-}
-
-O: "p_add: ", add, "\n";
-add ();
+O: add (2, add (4, 2)), '\n';
+O: add (add (add (4, 2), 2), 2), '\n';
+O: add (add (4, add (4, -2)), 2), '\n';

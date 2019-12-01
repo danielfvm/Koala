@@ -50,7 +50,7 @@ void cms_add (char* syntax, CmsCallback callback, int options)
     }
 }
 
-int _cms_find_next_bracket (size_t p, const char* text)
+int cms_find_next_bracket (size_t p, const char* text)
 {
     size_t inside_brackets  = 0;
     size_t text_size        = strlen (text);
@@ -64,7 +64,7 @@ int _cms_find_next_bracket (size_t p, const char* text)
         case '[': bracket_close = ']'; break;
         case '{': bracket_close = '}'; break;
         default:
-            fprintf (stderr, "[CMS][ERR] → Wrong first char used in ´_cms_find_next_bracket´. First char musst be '(', '[' or '{'!\n");
+            fprintf (stderr, "[CMS][ERR] → Wrong first char used in ´cms_find_next_bracket´. First char musst be '(', '[' or '{'!\n");
             return -1;
     }
 
@@ -78,9 +78,9 @@ int _cms_find_next_bracket (size_t p, const char* text)
         if (text[p] == '\\' && (p >= 1 && text[p-1] != '\\') && ++ p)
             continue;
 
-        if (text[p] == '\"' && (p <= 0 || text[p-1] != '\\'))
+        if (text[p] == '\"' && (p <= 0 || text[p-1] != '\\') && !in_char)
             in_string = !in_string;
-        if (text[p] == '\'' && (p <= 0 || text[p-1] != '\\'))
+        if (text[p] == '\'' && (p <= 0 || text[p-1] != '\\') && !in_string)
             in_char = !in_char;
 
         if (in_string || in_char)
@@ -152,7 +152,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                 if (template_char == '\0')
                 {
                     // Reached end of template's syntax
-                    if (cms_template->list[template_i].callback != NULL)
+                    if (cms_template->list[template_i].callback != NULL) 
                         cms_template->list[template_i].callback (data, template_data_size);
                     text_i = text_char_i - 1; // skip to last point found TODO: Add option for ´MULTIPLE_MODE´
                     break;
@@ -195,7 +195,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                         for (new_text_char_i -= 1; text[new_text_char_i] <= ' '; -- new_text_char_i);
 // might be wrong!
                         if ((text[new_text_char_i] == '('  || text[new_text_char_i] == '['  || text[new_text_char_i] == '{') && CMS_CHECK (template_options, CMS_USE_BRACKET_SEARCH_ALGORITHM))
-                            new_text_char_i = _cms_find_next_bracket (new_text_char_i, text);
+                            new_text_char_i = cms_find_next_bracket (new_text_char_i, text);
                         else while (text[new_text_char_i] != template_syntax[i])
                             new_text_char_i ++;
                     }
@@ -210,7 +210,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                     data_str[i] = '\0'; // end character
 
                     // Check if '#' has legall ascii charactors 
-                    if (template_char == '#' && has_illigal_ascii (data_str))
+                    if (template_char == '#' && (data_str[0] == '\0' || has_illigal_ascii (data_str)))
                         break; 
 
                     // Update ´text_char_i´ to keep on comparing the ´text´ with the given syntax

@@ -1,5 +1,5 @@
-x = 0
+x = 0.0;
 
 while True:
-    print (x)
-    x += 1
+    x += 1;
+    print('\r' + str(x), end='')

@@ -1,0 +1,16 @@
+println (x) {
+    O: println.x, '\n';
+}
+
+test (x, y) {
+    println ("$test.x\t$test.y");
+    test.x {
+        test (test.x - 1, test.y + 1);
+    } {
+        println ("- RETURN -");
+    }
+
+    println ("$test.x\t$test.y");
+}
+
+test (10);

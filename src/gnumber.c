@@ -27,6 +27,7 @@ char* _substr (const char *src, int m, int n)
     return dest - len; // destination string
 }
 
+/*
 void _trim (char** text)
 {
     // Trim begin
@@ -37,7 +38,6 @@ void _trim (char** text)
     for (unsigned int len = strlen (*text) - 1; (*text)[len] <= ' '; -- len)
         (*text)[len] = '\0';
 }
-
 
 int _find_close_bracket (const char* str, const char open, const char close, int p)
 {
@@ -59,7 +59,6 @@ int _find_brackets (const char* str)
             return 1;
     return 0;
 }
-
 
 
 bool* _gba_conv_calculation (const char* calc, unsigned int* size)
@@ -108,7 +107,6 @@ bool gba_calculation_simple (const char* calc)
 
     _gba_conv_calculation (calc, &size);
 
-    /** Starts calculation with ´and´ **/
     for (i = 1; i < size; i += 2)
     {
         if (array[i] != '&')
@@ -139,7 +137,6 @@ bool gba_calculation_simple (const char* calc)
 
 bool gba_calculation (const char* calc)
 {
-    /** Calculation with brackets, cuts bracket-piece and makes simple calculation **/
     if (_find_brackets (calc))
     {
         unsigned int new_calc_len = 1000;
@@ -187,7 +184,7 @@ bool gba_calculation (const char* calc)
 
 }
 
-
+*/
 
 void gna_consider_sign (char* str)
 {
@@ -231,6 +228,7 @@ void gna_consider_sign (char* str)
         memmove (&str[w], &str[str_len], str_len - w);
 }
 
+/*
 float* _gna_conv_calculation (const char* calc, unsigned int* size)
 {
     unsigned int calc_len = strlen(calc);
@@ -281,7 +279,6 @@ float gna_calculation_simple (const char* calc)
     // Converts cstring to an float array
     array = _gna_conv_calculation (calc, &size);
 
-    /** Starts calculation with mul & div **/
     for (i = 1; i < size; i += 2)
     {
         char compute = array[i];
@@ -303,7 +300,6 @@ float gna_calculation_simple (const char* calc)
         i -= 2;
     }
 
-    /** Calculating with add & minus **/
 
     // Store first value as result -> Simpler to calculate with
     float result = array[0];
@@ -325,7 +321,6 @@ float gna_calculation_simple (const char* calc)
 
 float gna_calculation (const char* calc)
 {
-    /** Calculation with brackets, cuts bracket-piece and makes simple calculation **/
     if (_find_brackets (calc))
     {
         unsigned int new_calc_len = 1000;
@@ -370,7 +365,7 @@ float gna_calculation (const char* calc)
 }
 
 
-
+*/
 
 
 
@@ -423,19 +418,22 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
     char*  value;
 
     bool in_string = 0;
+    bool in_char   = 0;
 
     // Find maximum element count by searching after computes 
     for (i = 0, *size = 1; i < strlen (calc); ++ i)
     {
-/*
         // continue if double '\'
         if (calc[i] == '\\' && i >= 1 && calc[i-1] == '\\' && ++ i)
             continue;
 
-        if (calc[i] == '"' && (i == 0 || calc[i-1] == '\\'))
+        if (!in_char && calc[i] == '"' && (i == 0 || calc[i-1] != '\\'))
             in_string = !in_string;
-*/
-        if (!in_string && (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/'))
+
+        if (!in_string && calc[i] == '\'' && (i == 0 || calc[i-1] != '\\'))
+            in_char = !in_char;
+
+        if (!in_string && !in_char && (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/'))
             *size += 2;
     }
 
@@ -444,25 +442,25 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
 
     for (i = 0; i < calc_len; ++ i)
     {
-/*
-        // continue if double '\'
+        // continue if double '\' TODO: DOES NOT WORK!
         if (calc[i] == '\\' && i >= 1 && calc[i-1] == '\\' && ++ i)
             continue;
 
-        if (calc[i] == '"' && (i == 0 || calc[i-1] == '\\'))
+        if (!in_char && calc[i] == '"' && (i == 0 || calc[i-1] != '\\'))
             in_string = !in_string;
-*/
+
+        if (!in_string && calc[i] == '\'' && (i == 0 || calc[i-1] != '\\'))
+            in_char = !in_char;
 
         // Skips at beginning & if it is not a compute
         if ((calc[i] != '+' && calc[i] != '-' && calc[i] != '*' && calc[i] != '/') || i == 0)
             continue;
 
-//        if (in_string)
-//            continue;
+        if (in_string || in_char)
+            continue;
 
         value = _substr (calc, last_i, i);
         gna_consider_sign (value);
-
 
         // Insert value to float array
         (*array)[array_i ++] = fr_convert_to_value (value);
@@ -481,7 +479,7 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
     (*array)[array_i ++] = fr_convert_to_value (_substr (calc, last_i, i));
 }
 
-Value gna_registry_calculation_simple (Registry** register_list, const char* calc, Value (*fr_convert_to_value) (char*), size_t (*var_add) (char*))
+Value gna_registry_calculation_simple (Registry** register_list, const char* calc, Value (*fr_convert_to_value) (char*))
 {
     size_t i, j, size;
     Value* array;
@@ -505,8 +503,7 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
 
         if (!has_found_term)
         {
-            alloc_value = var_add("");
-            fr_register_add (register_list, REGISTER_ALLOC (VALUE_INT (alloc_value), array[i - 1]));
+            alloc_value = fr_register_add (register_list, REGISTER_ALLOC (array[i - 1]));
             array[i - 1] = POINTER (alloc_value);
             has_found_term = 1;
         }
@@ -529,8 +526,7 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
 
 
     // Store first value as result -> Simpler to calculate with
-    size_t m_pos = var_add("");
-    fr_register_add (register_list, REGISTER_ALLOC (VALUE_INT (m_pos), array[0]));
+    size_t m_pos = fr_register_add (register_list, REGISTER_ALLOC (array[0]));
 
     // Sum of all values in float array
     for (i = 1; i < size; i += 2)
