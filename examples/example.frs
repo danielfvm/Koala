@@ -1,15 +1,14 @@
-# FOUND ERRORS:
-# cannot call same function inside the function -> stack wrong init -> malloc invalid size & Segfault
-# cannot pass function and use it with passed params in same time -> sysmalloc error
+print (x) > O: x, '\n';
 
-add (x, y) > ret add.x + add.y;
-
-call (func, x, y) {
-    var x = call.func (call.x, call.y);
+read () {
+    var x;
+    I: &x;
+    ret x;
 }
 
-call (add, 2, 2);
+test (x, y = 1) {
+    !x { ret y; }
+    ret test (x - 1, y * (x + 1));
+}
 
-O: add (2, add (4, 2)), '\n';
-O: add (add (add (4, 2), 2), 2), '\n';
-O: add (add (4, add (4, -2)), 2), '\n';
+print (test (read ()));

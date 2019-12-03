@@ -45,13 +45,19 @@ void cms_add (char* syntax, CmsCallback callback, int options)
         cms_tmp_template->list[id].data_size = 0;
 
         for (size_t i = 0; i < strlen (syntax); ++ i)
-            if (syntax[i] == '$')
+            if (syntax[i] == '$' || syntax[i] == '#' || syntax[i] == '%')
                 cms_tmp_template->list[id].data_size ++;
     }
 }
 
 int cms_find_next_bracket (size_t p, const char* text)
 {
+    if (p >= strlen (text))
+    {
+        fprintf (stderr, "[CMS][ERR] → first char out of text size\n");
+        return -1;
+    }
+
     size_t inside_brackets  = 0;
     size_t text_size        = strlen (text);
     char   bracket_open     = text[p];
@@ -139,7 +145,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
             text_char_i = text_i;
 
             // Create data for template
-            CmsData* data   = malloc (sizeof (CmsData) * template_data_size);
+            CmsData* data   = template_data_size ? malloc (sizeof (CmsData) * template_data_size) : NULL;
             int      data_i = 0;
 
             for (template_syntax_i = 0; ; ++ template_syntax_i)
@@ -251,7 +257,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                 text_char_i ++;
             }
 
-            free (data);
+            if (data) free (data);
         }
     }
 

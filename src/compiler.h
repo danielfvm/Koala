@@ -4,6 +4,7 @@ typedef struct
 {
     size_t position;
     char*  name;
+    char*  function_path;
 } Variable;
 
 void  fr_compiler_init ();

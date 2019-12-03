@@ -1,0 +1,31 @@
+test (fset, fget, x) {
+
+    set (x) > ~test.x = x;
+
+    get () > ret ~test.x;
+
+    ~fset = set;
+    ~fget = get;
+}
+
+var fset = 0;
+var fget = 0;
+var fx   = 0;
+
+test (&fset, &fget, &fx);
+
+fset (3);
+
+
+
+var fset2 = 0;
+var fget2 = 0;
+var fx2   = 0;
+
+test (&fset2, &fget2, &fx2);
+
+fset2 (2);
+
+
+O: ">>", fget(), '\n';
+O: ">>", fget2(), '\n';

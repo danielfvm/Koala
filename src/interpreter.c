@@ -402,14 +402,14 @@ int fr_run (const Registry* register_list)
                     {
                         char* text = malloc (strlen (value) + 20);
                         sprintf (text, "%s%d", value, (intptr_t) fr_get_memory (reg->reg_values[1]));
-                        strcpy (new_value = malloc (strlen (text)), text);
+                        strcpy (new_value = malloc (strlen (text) + 1), text);
                         free (text);
                     }
                     else if (data_type == DT_FLOAT)
                     {
                         char* text = malloc (strlen (value) + 20);
                         sprintf (text, "%s%f", value, ((intptr_t) fr_get_memory (reg->reg_values[1])) / FLOAT_CONV_VALUE);
-                        strcpy (new_value = malloc (strlen (text)), text);
+                        strcpy (new_value = malloc (strlen (text) + 1), text);
                         free (text);
                     }
                 }
