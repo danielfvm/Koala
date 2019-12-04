@@ -1,31 +1,56 @@
 < comments sometimes buggy - forgot do ignore string and brackets >
 < memory leak on runtime - because of string concat >
 
+< STD - DataTypes >
 var STRING = "";
 var CHAR   = ' ';
 var INT    = 0;
 var FLOAT  = 0.0;
 
+< STD - Read Methode >
 read (type = INT) {
     var x = type;
     I: &x;
     ret x;
 }
 
+< STD - Print Methode >
 print (x) > O: x, '\n';
 
+< STD - Sleep Methode, working on Linux/BSD/Unix/OSX >
 sleep (x) > S: "sleep $x";
 
+< STD - clear text in terminal >
+clear (x) > S: "clear";
+
+< STD - For loop >
 for (min, max, lambda) {
-    (max - min + 1) -> {
+    (min < max + 1) -> {
         lambda (min);
         min += 1;
     }
 }
 
+< STD - exit >
+exit (status) {
+    O: "\nExit status: $status\n";
+    jump -1;
+}
+
+< STD - abs make negative numbers positive >
+< TODO: make it better - fix bugs >
+abs (x) { 
+    (x < 0) { 
+        ret x * (-1); 
+    } { 
+        ret x; 
+    }
+}
+
+
 < Example program >
 
-for (read(), read(), (x) {
-    O: ':', x, '\n';
+for (read (), read (), (i) {
+    O: ':', i, '\n';
 });
 

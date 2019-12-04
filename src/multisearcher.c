@@ -240,7 +240,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                             new_text_char_i = cms_find_next_bracket (new_text_char_i, text);
                         else while (text[new_text_char_i] != template_syntax[i])
                             new_text_char_i ++;
-                    */
+                       */
                         // might be wrong!
                         while (text[new_text_char_i] != template_syntax[i])
                             if ((text[new_text_char_i] == '('  || text[new_text_char_i] == '['  || text[new_text_char_i] == '{') 

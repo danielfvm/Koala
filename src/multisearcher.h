@@ -12,7 +12,8 @@ enum CmsOption
     CMS_IGNORE_UPPER_LOWER_CASE,        // Ignores if char is upper or down case
     CMS_IGNORE_SPACING_LENGTH,          // Ignores if there are multiple spaces instead of the given spaces in template
     CMS_IGNORE_SPACING,                 // Ignores if there are spaces between text
-    CMS_USE_BRACKET_SEARCH_ALGORITHM    // Ignores if there are spaces between text
+    CMS_USE_BRACKET_SEARCH_ALGORITHM,   // Ignores if there are spaces between text
+    CMS_IGNORE_STRING
 };
 
 

@@ -523,7 +523,6 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         fr_compile (func_code, variables, variable_count);
         in_function = old_in_function;
          
-
         // Jump to call position (location of call saved in ´__origin__´)
         fr_register_add (&register_list, REGISTER_JMP (fr_convert_to_value (var_name)));
 
@@ -555,11 +554,39 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             text ++;
         }
 
-
         if (!strcmp (text, "true"))
             return VALUE_INT (1);
         else if (!strcmp (text, "false"))
             return VALUE_INT (0);
+
+        size_t is_bigger  = contains (text, '>');
+        size_t is_smaller = contains (text, '<');
+
+        char* v1_text;
+        char* v2_text;
+
+        if (is_bigger)
+        {
+            strcpy (v1_text = malloc (is_bigger), text);
+            v1_text[is_bigger - 1] = '\0';
+
+            strcpy (v2_text = malloc (strlen (text) - is_bigger), text + is_bigger);
+
+            int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+            fr_register_add (&register_list, REGISTER_BIG (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
+            return POINTER (m_index);
+        }
+        else if (is_smaller)
+        {
+            strcpy (v1_text = malloc (is_smaller), text);
+            v1_text[is_smaller - 1] = '\0';
+
+            strcpy (v2_text = malloc (strlen (text) - is_smaller), text + is_smaller);
+
+            int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+            fr_register_add (&register_list, REGISTER_SMA (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
+            return POINTER (m_index);
+        }
 
         // ´text´ is a ´string´
         if (!is_str_concat (text))
@@ -577,7 +604,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             return VALUE_CHAR (str_replace (str_replace (str_replace (str_replace (str_replace (str_replace (str_replace (text, "\\\\", "$/638$"), "\\'", "'"), "\\r", "\r"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\"), "\\'", "'")[0]);
         }
 
-                // Check if text is a ´int´ or ´float´
+        // Check if text is a ´int´ or ´float´
         bool var_is_number = 1;
         bool var_is_float  = 1;
         bool var_contains_sign = contains (text, '+') || contains (text, '-') || contains (text, '*') || contains (text, '/');

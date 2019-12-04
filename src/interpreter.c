@@ -530,14 +530,16 @@ int fr_run (const Registry* register_list)
             }
             case BIG:
             {
-                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) <= (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
-                    i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
+//                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) <= (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
+//                    i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
+                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) > (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
                 continue;
             }
             case SMA:
             {
-                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) >= (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
-                    i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
+//                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) >= (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
+//                    i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
+                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) < (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
                 continue;
             }
             case OUT:
