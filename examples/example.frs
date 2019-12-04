@@ -1,5 +1,5 @@
-< lambda still not working perfect >
-< comments sometimes buggy >
+< comments sometimes buggy - forgot do ignore string and brackets >
+< memory leak on runtime - because of string concat >
 
 var STRING = "";
 var CHAR   = ' ';
@@ -23,13 +23,9 @@ for (min, max, lambda) {
     }
 }
 
-
-
-
 < Example program >
 
-print ("Loop from-to:");
-
-for (read(), read(), (i) { 
-    O: ":$i\n";
+for (read(), read(), (x) {
+    O: ':', x, '\n';
 });
+

@@ -65,7 +65,9 @@ Value VALUE (byte data_type, void* value)
 
 Value VALUE_STR (void* value)
 {
-    return (Value) { DT_STRING, VALUE_TYPE_VALUE, value };
+    char* str;
+    strcpy (str = malloc (strlen (value) + 1), value);
+    return (Value) { DT_STRING, VALUE_TYPE_VALUE, str };
 }
 
 Value VALUE_CHAR (char value)
@@ -412,10 +414,10 @@ int fr_run (const Registry* register_list)
                         strcpy (new_value = malloc (strlen (text) + 1), text);
                         free (text);
                     }
+                    fr_set_memory (reg->reg_values[0], (void*) new_value);
+                    continue;
                 }
-                else
-                    new_value = register_list[m_value]->reg_values[0].value + m_value_add;
-
+                new_value = register_list[m_value]->reg_values[0].value + m_value_add;
                 fr_set_memory (reg->reg_values[0], (void*) new_value);
                 continue;
             }
@@ -510,31 +512,31 @@ int fr_run (const Registry* register_list)
             }
             case NEQ:
             {
-                if (fr_get_memory (reg->reg_values[0]) == fr_get_memory (reg->reg_values[1]))
+                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) == (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
                     i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
                 continue;
             }
             case BEQ:
             {
-                if (fr_get_memory (reg->reg_values[0]) < fr_get_memory (reg->reg_values[1]))
+                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) < (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
                     i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
                 continue;
             }
             case SEQ:
             {
-                if (fr_get_memory (reg->reg_values[0]) > fr_get_memory (reg->reg_values[1]))
+                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) > (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
                     i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
                 continue;
             }
             case BIG:
             {
-                if (fr_get_memory (reg->reg_values[0]) <= fr_get_memory (reg->reg_values[1]))
+                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) <= (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
                     i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
                 continue;
             }
             case SMA:
             {
-                if (fr_get_memory (reg->reg_values[0]) >= fr_get_memory (reg->reg_values[1]))
+                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) >= (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
                     i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
                 continue;
             }
