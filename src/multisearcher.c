@@ -115,6 +115,19 @@ bool has_illigal_ascii (const char* text)
     return 0;
 }
 
+
+char* cms_line = NULL;
+char* cms_get_current_line ()
+{
+    return cms_line;
+}
+
+int cms_line_number = 0;
+int cms_get_current_line_number ()
+{
+    return cms_line_number;
+}
+
 void cms_find (const char* text, CmsTemplate* cms_template)
 {
     size_t text_i, text_size, text_char, text_char_i;
@@ -131,9 +144,33 @@ void cms_find (const char* text, CmsTemplate* cms_template)
     template_size = cms_template->size;
     text_size     = strlen (text);
 
+    // Reset
+    cms_line = malloc (1);
+    cms_line[0] = '\0';
+
     // Loop through string
     for (text_i = 0; text_i < text_size; ++ text_i)
     {
+        if (text_i == 0 || text[text_i] == '\n')
+        {
+            cms_line_number ++;
+
+            size_t next_endl;
+
+            for (next_endl = text_i + 1; text[next_endl] != '\n' && text[next_endl] != '\0'; ++ next_endl);
+
+            if (next_endl == text_i + 1)
+                strcpy (cms_line = malloc (1), "");
+            else
+            {
+                size_t len = next_endl - text_i + ((text_i == 0 && text[text_i] != '\n') ? 1 : 0);
+                cms_line = malloc (len);
+                for (size_t i = text_i + 1; i < text_i + len; ++ i)
+                    cms_line[i - text_i - 1] = text[i - ((text_i == 0 && text[text_i] != '\n') ? 1 : 0)];
+                cms_line[len-1] = '\0';
+            }
+        }
+
         // Loop through template's syntaxes
         for (template_i = 0; template_i < template_size; ++ template_i)
         {
@@ -199,11 +236,19 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                     {
                         // last ´template_syntax´ with > ' '
                         for (new_text_char_i -= 1; text[new_text_char_i] <= ' '; -- new_text_char_i);
-// might be wrong!
-                        if ((text[new_text_char_i] == '('  || text[new_text_char_i] == '['  || text[new_text_char_i] == '{') && CMS_CHECK (template_options, CMS_USE_BRACKET_SEARCH_ALGORITHM))
+                       /* if ((text[new_text_char_i] == '('  || text[new_text_char_i] == '['  || text[new_text_char_i] == '{') && CMS_CHECK (template_options, CMS_USE_BRACKET_SEARCH_ALGORITHM))
                             new_text_char_i = cms_find_next_bracket (new_text_char_i, text);
                         else while (text[new_text_char_i] != template_syntax[i])
                             new_text_char_i ++;
+                    */
+                        // might be wrong!
+                        while (text[new_text_char_i] != template_syntax[i])
+                            if ((text[new_text_char_i] == '('  || text[new_text_char_i] == '['  || text[new_text_char_i] == '{') 
+                                    && CMS_CHECK (template_options, CMS_USE_BRACKET_SEARCH_ALGORITHM))
+                                new_text_char_i = cms_find_next_bracket (new_text_char_i, text);
+                            else
+                                new_text_char_i ++;
+
                     }
 
                     // Size of new ´data_str´
@@ -263,4 +308,5 @@ void cms_find (const char* text, CmsTemplate* cms_template)
 
     free (cms_template->list);
     free (cms_template);
+    free (cms_line);
 }

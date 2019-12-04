@@ -30,6 +30,10 @@ typedef struct
     CmsSearch*   list;
 } CmsTemplate;
 
+char* cms_get_current_line ();
+
+int cms_get_current_line_number ();
+
 int cms_find_next_bracket (size_t p, const char* text);
 
 /*

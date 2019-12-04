@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <math.h>
 
 // Trims beginning and end of &string
 void trim (char** text)
@@ -48,10 +49,16 @@ void ctrim (char** text)
     }
 }
 
+bool is_bracket (char c)
+{
+    return c == '(' || c == '[' || c == '{' || c == ')' || c == ']' || c == '}';
+}
+
 size_t contains (char* text, char c)
 {
     bool in_string = 0;
     bool in_char   = 0;
+    int in_bracket = 0;
 
     for (size_t i = 0; text[i] != '\0'; ++ i)
     {
@@ -64,7 +71,12 @@ size_t contains (char* text, char c)
         if (text[i] == '\'' && (i == 0 || text[i-1] != '\\') && !in_string)
             in_char = !in_char;
 
-        if (text[i] == c && !in_string && !in_char)
+        if (text[i] == '(' || text[i] == '[' || text[i] == '{')
+            in_bracket ++;
+        if (text[i] == ')' || text[i] == ']' || text[i] == '}')
+            in_bracket --;
+
+        if (text[i] == c && (is_bracket (c) || (!in_string && !in_char && !in_bracket)))
             return i + 1;
     }
     return 0;
@@ -104,9 +116,9 @@ bool is_str_concat (char* str)
 int split (char* buffer, char delim, char*** output)
 {
     int  partCount = 0; // Count of splited elements used as index for ´output´
-    int  inBracket = 0; // If ´inBracket´ bigger than 0 then ignore delim
-    bool inString  = 0; // If ´inString´ eq 1 then ignore delim & brackets
-    bool inChar    = 0; // If ´inChar´ eq 1 then ignore delim & brackets
+    int  in_bracket = 0; // If ´inBracket´ bigger than 0 then ignore delim
+    bool in_string  = 0; // If ´inString´ eq 1 then ignore delim & brackets
+    bool in_char    = 0; // If ´inChar´ eq 1 then ignore delim & brackets
 
     char* ptr;
     char* lastPos;
@@ -122,23 +134,20 @@ int split (char* buffer, char delim, char*** output)
             continue;
 
         // Check if char is string
-        if (*ptr == '\"' && (ptr == buffer || *(ptr - 1) != '\\') && !inChar)
-            inString = !inString;
+        if (*ptr == '\"' && (ptr == buffer || *(ptr - 1) != '\\') && !in_char)
+            in_string = !in_string;
 
         // Check if char is character
-        if (*ptr == '\'' && (ptr == buffer || *(ptr - 1) != '\\') && !inString)
-            inChar = !inChar;
+        if (*ptr == '\'' && (ptr == buffer || *(ptr - 1) != '\\') && !in_string)
+            in_char = !in_char;
 
-        // Check if it is the start of a bracket
-        if (*ptr == '(' && !inString && !inChar)
-            inBracket ++;
-
-        // Check if it is the end of a bracket
-        if (*ptr == ')' && !inString && !inChar)
-            inBracket --;
+        if (*ptr == '(' || *ptr == '[' || *ptr == '{')
+            in_bracket ++;
+        if (*ptr == ')' || *ptr == ']' || *ptr == '}')
+            in_bracket --;
 
         // Ignore delim if it is in a String/Char/Bracket
-        if (*ptr != delim || inString || inChar || inBracket)
+        if (*ptr != delim || in_string || in_char || in_bracket)
             continue;
 
         // Set splited substring in output and trim it
@@ -186,14 +195,14 @@ char* str_replace (char* orig, char* rep, char* with)
     if (!with)
         with = "";
 
-    len_with = strlen(with);
+    len_with = strlen (with);
 
     // count the number of replacements needed
     ins = orig;
-    for (count = 0; tmp = strstr(ins, rep); ++count)
+    for (count = 0; tmp = strstr (ins, rep); ++count)
         ins = tmp + len_rep;
 
-    tmp = result = malloc(strlen(orig) + (len_with - len_rep) * count + 1);
+    tmp = result = malloc (strlen (orig) + (len_with - len_rep) * count + 1);
 
     if (!result)
         return NULL;
@@ -203,16 +212,37 @@ char* str_replace (char* orig, char* rep, char* with)
     //    tmp points to the end of the result string
     //    ins points to the next occurrence of rep in orig
     //    orig points to the remainder of orig after "end of rep"
-    while (count--) 
+    while (count --) 
     {
-        ins = strstr(orig, rep);
+        ins = strstr (orig, rep);
         len_front = ins - orig;
-        tmp = strncpy(tmp, orig, len_front) + len_front;
-        tmp = strcpy(tmp, with) + len_with;
+        tmp = strncpy (tmp, orig, len_front) + len_front;
+        tmp = strcpy  (tmp, with) + len_with;
         orig += len_front + len_rep; // move to next "end of rep"
     }
     strcpy(tmp, orig);
     return result;
+}
+
+void error (const char* msg, void* variablen, ...)
+{
+    int line_number = cms_get_current_line_number ();
+    int nDigits = floor (log10 (abs (line_number))) + 1;
+
+    char* arrow = malloc (nDigits * 3 + 1);
+    size_t i;
+
+    for (i = 0; i < nDigits; ++ i)
+        strcat (arrow, "─");
+    arrow[i * 3 + 1] = '\0';
+
+    fprintf (stderr, "\x1b[90m[\x1b[33m%d\x1b[90m]\x1b[92m─►\x1b[93m %s\n \x1b[92m└%s─► \x1b[91m", line_number, cms_get_current_line (), arrow);
+    fprintf (stderr, msg, variablen);
+    fprintf (stderr, "\x1b[0m\n");
+
+    free (arrow);
+
+    exit (EXIT_SUCCESS);
 }
 
 Registry* register_list;
@@ -291,10 +321,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         (*variables) = realloc (*variables, sizeof (Variable) * (variable_count + 1));
 
         if (!(*variables)) 
-        {
-            fprintf (stderr, "Failed to add new variable ´%s´ to variables, ´realloc´ failed!", name);
-            exit (EXIT_FAILURE);
-        }
+            error ("Failed to add new variable ´%s´ to variables, ´realloc´ failed!", name);
 
 //        printf ("Alloc %s at %d!\n", name, m_index);
 
@@ -440,8 +467,11 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         strcpy (old_function_path = malloc (strlen (function_path) + 1), function_path);
 
         // Add to function_path
-        strcat (function_path = realloc (function_path, strlen (function_path) + strlen (func_name) + 2), ".");
-        strcat (function_path, func_name);
+        if (func_name != NULL)
+        {
+            strcat (function_path = realloc (function_path, strlen (function_path) + strlen (func_name) + 2), ".");
+            strcat (function_path, func_name);
+        }
         
         // split arguments of function
         if (func_args[0] != '\0')
@@ -475,8 +505,11 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 
 
         // Allocate memory for function position
-        func_pos = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (fr_get_current_register_position (&register_list) + 2)));
-        var_add_function_path (old_function_path, func_name, func_pos);
+        
+        Value value_funk_position = VALUE_INT (fr_get_current_register_position (&register_list) + 2);
+        func_pos = fr_register_add (&register_list, REGISTER_ALLOC (value_funk_position));
+        if (func_name != NULL)
+            var_add_function_path (old_function_path, func_name, func_pos);
 
         // Jump to end of functions body, will not happen if function is called
         size_t x = fr_register_add (&register_list, REGISTER_JMP (VALUE_INT (-1)));
@@ -498,9 +531,14 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         register_list[x]->reg_values[0] = VALUE_INT (fr_get_current_register_position(&register_list));
  
         // Remove from function_path
-        size_t function_path_size = strlen (function_path) - strlen (func_name) - 1;
-        function_path[function_path_size] = '\0';
-        function_path = realloc (function_path, function_path_size + 1);
+        if (func_name != NULL)
+        {
+            size_t function_path_size = strlen (function_path) - strlen (func_name) - 1;
+            function_path[function_path_size] = '\0';
+            function_path = realloc (function_path, function_path_size + 1);
+        }
+
+        return value_funk_position;
     }
 
     // Converts a string to ´Value´ supports also different types of Values
@@ -510,6 +548,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         // Trim text to remove spaces
         trim (&text);
 
+        // Remove brackets if outside is bracket
         if (text[0] == '(' && strlen (text) == cms_find_next_bracket (0, text) + 1)
         {
             text[strlen (text) - 1] = '\0';
@@ -537,6 +576,81 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             text[strlen (text) - 1] = '\0'; // Remove last ´'´
             return VALUE_CHAR (str_replace (str_replace (str_replace (str_replace (str_replace (str_replace (str_replace (text, "\\\\", "$/638$"), "\\'", "'"), "\\r", "\r"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\"), "\\'", "'")[0]);
         }
+
+                // Check if text is a ´int´ or ´float´
+        bool var_is_number = 1;
+        bool var_is_float  = 1;
+        bool var_contains_sign = contains (text, '+') || contains (text, '-') || contains (text, '*') || contains (text, '/');
+
+        for (size_t i = 0; text[i] != '\0'; ++ i)
+        {
+            if ((text[i] == '-' || text[i] == '+') && i == 0) // skip if first char is + or -
+                continue;
+
+            if (text[i] < '0' || text[i] > '9')
+                var_is_number = 0;
+            if ((text[i] < '0' || text[i] > '9') && text[i] != '.')
+                var_is_float = 0;
+        }
+
+        // ´text´ is ´int´
+        if (var_is_number)
+            return VALUE_INT (atoi (text));
+
+        // ´text´ is ´float´
+        if (var_is_float)
+            return VALUE_FLOAT (atof (text));
+
+        // TODO: CALCULATING check if text contain +/-*
+        if (var_contains_sign)
+            return gna_registry_calculation_simple (&register_list, text, fr_convert_to_value);
+
+
+        // Function call
+        size_t func_end_name = 0;
+
+        if ((func_end_name = contains (text, '(')) && func_end_name > 1 && strlen (text) == cms_find_next_bracket (func_end_name - 1, text) + 1)
+        {
+            char* func_name = malloc (strlen (text) + 1);
+            strcpy (func_name, text);
+            func_name[func_end_name - 1] = '\0';
+            func_name = realloc (func_name, func_end_name - 1);
+            trim (&func_name);
+
+            char* func_args = malloc (strlen (text) + 1);
+            strcpy (func_args, text + func_end_name);
+            func_args[strlen (text) - func_end_name - 1] = '\0';
+            func_args = realloc (func_args, strlen (text) - func_end_name);
+            trim (&func_args);
+
+            // Check if function exist
+            if (var_get_pos_by_name (func_name) != -1)
+                return create_call_function (func_name, func_args, fr_convert_to_value);
+        }
+
+        // Function / Lambda
+        
+        size_t func_args_end;
+        size_t func_code_begin, func_code_end;
+
+        if (text[0] == '(' && (func_args_end = cms_find_next_bracket (0, text)) != -1 && func_end_name < strlen (text) && 
+                (func_code_begin = contains (text, '{') - 1) != -1 && strlen (text) == (func_code_end = cms_find_next_bracket (func_code_begin, text)) + 1)
+        {
+            char* func_args = malloc (strlen (text) + 1);
+            strcpy (func_args, text + 1);
+            func_args[func_args_end - 1] = '\0';
+            func_args = realloc (func_args, func_args_end);
+            trim (&func_args);
+
+            char* func_code = malloc (strlen (text) + 1);
+            strcpy (func_code, text + func_code_begin + 1);
+            func_code[func_code_end - func_code_begin - 1] = '\0';
+            func_code = realloc (func_code, func_code_end - func_code_begin);
+            trim (&func_code);
+
+            return create_function (NULL, func_args, func_code, fr_convert_to_value);
+        }
+
 
         // ´text´ is a variable and returns value -> ´pointer´
         int var_position;
@@ -576,76 +690,8 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             return POINTER (x);
         }
 
-        // Check if text is a ´int´ or ´float´
-        bool var_is_number = 1;
-        bool var_is_float  = 1;
-
-        for (size_t i = 0; text[i] != '\0'; ++ i)
-        {
-            if ((text[i] == '-' || text[i] == '+') && i == 0) // skip if first char is + or -
-                continue;
-
-            if (text[i] < '0' || text[i] > '9')
-                var_is_number = 0;
-            if ((text[i] < '0' || text[i] > '9') && text[i] != '.')
-                var_is_float = 0;
-        }
-
-        // ´text´ is ´int´
-        if (var_is_number)
-            return VALUE_INT (atoi (text));
-
-        // ´text´ is ´float´
-        if (var_is_float)
-            return VALUE_FLOAT (atof (text));
-
-
-        // Function call
-        size_t func_end_name = 0;
-
-        if ((func_end_name = contains (text, '(')) && func_end_name > 1 && strlen (text) == cms_find_next_bracket (func_end_name - 1, text) + 1)
-        {
-            char* func_name = malloc (strlen (text) + 1);
-            strcpy (func_name, text);
-            func_name[func_end_name - 1] = '\0';
-            func_name = realloc (func_name, func_end_name - 1);
-            trim (&func_name);
-
-            char* func_args = malloc (strlen (text) + 1);
-            strcpy (func_args, text + func_end_name);
-            func_args[strlen (text) - func_end_name - 1] = '\0';
-            func_args = realloc (func_args, strlen (text) - func_end_name);
-            trim (&func_args);
-
-            // Check if function exist
-            if (var_get_pos_by_name (func_name) != -1)
-                return create_call_function (func_name, func_args, fr_convert_to_value);
-        }
-
-        // Function / Lambda
-        
-        size_t func_args_begin, func_args_end;
-         
-        if (text[0] == '(' && (func_end_name = cms_find_next_bracket (0, text)) != -1 && func_end_name < strlen (text)
-             && (func_args_begin = contains (text + func_end_name, '(')) && (func_args_end = cms_find_next_bracket (func_args_begin - 2, text)) != -1)
-        {
-            char* func_name = malloc (strlen (text) + 1);
-            strcpy (func_name, text + 1);
-            func_name[func_end_name - 1] = '\0';
-            func_name = realloc (func_name, func_end_name);
-            trim (&func_name);
-            puts (func_name);
-
-            char* func_args = malloc (strlen (text) + 1);
-            strcpy (func_args, text + 1 + func_args_begin);
-            func_args[func_args_end - 1] = '\0';
-            func_args = realloc (func_args, func_args_end);
-            trim (&func_args);
-            puts (func_args);
-        }
-
-        // TODO: CALCULATING check if text contain +/-*
-        return gna_registry_calculation_simple (&register_list, text, fr_convert_to_value);
+        // Error variable does not exist!
+        error ("Variable ´%s´ does not exist in this scope!\n", text);
     }
 
 
@@ -668,7 +714,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             {
                 args[i][equal_pos - 1] = '\0';
                 m_value = fr_convert_to_value (args[i] + equal_pos); // - 1
-                ctrim (&args[i]);
+                trim (&args[i]);
                 var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (m_value)));
             }
             else
@@ -676,7 +722,6 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
                 var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))));
             }
         }
-
     }
 
     void c_clabel (CmsData* data, int size)
@@ -896,6 +941,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 
     // Check if c_check_else & c_check can be replaced with c_bracket...
     cms_create ( &cms_template, CMS_LIST ( {
+        cms_add ("< % >",                  NULL,                CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) { % }",          c_function,          CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) > % ;",          c_function_short,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) ;",   c_call,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
@@ -929,6 +975,10 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         cms_add ("# -> { % }",          c_loop,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("ret % ;",             c_return,       CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
     } ));
+
+   
+    // Allocate at register index 0 value 0 -> pointer pointing at 0 have value 0
+    fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
 
     // Search syntax using ´cms_template´ in ´example_text´
     cms_find (code, cms_template);

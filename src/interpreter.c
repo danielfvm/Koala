@@ -553,9 +553,8 @@ int fr_run (const Registry* register_list)
             }
             case CIN:
             {
-//              byte   m_type  =  register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type; 
+                byte   m_type  =  register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type; 
                 void** m_value = &register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].value;
-                byte   m_type  =  fr_get_data_type (fr_get_memory_value (reg->reg_values[0])); 
 
                 if (m_type == DT_STRING)
                 {
