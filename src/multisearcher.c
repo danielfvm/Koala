@@ -308,5 +308,4 @@ void cms_find (const char* text, CmsTemplate* cms_template)
 
     free (cms_template->list);
     free (cms_template);
-    free (cms_line);
 }
