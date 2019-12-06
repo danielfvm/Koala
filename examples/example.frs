@@ -1,59 +1,98 @@
-< error message wrong line >
-< improve float system >
-< cannot call for in for >
+< START - FOUND BUGS >
+    < error message wrong line >
+    < improve float system >
+    < cannot call for in for >
+    < wrong stack when calling function in function ! >
+< END - FOUND BUGS >
 
-< STD - DataTypes >
-var STRING = "";
-var CHAR   = ' ';
-var INT    = 0;
-var FLOAT  = 0.0;
+< START - Koala's Standart Library >
+    < STD - DataTypes >
+    var STRING = "";
+    var CHAR   = ' ';
+    var INT    = 0;
+    var FLOAT  = 0.0;
 
-< STD - Read Methode >
-read (type = INT) {
-    var x = type;
-    I: &x;
-    ret x;
-}
-
-< STD - Print Methode >
-print (x) > O: x, '\n';
-
-< STD - Sleep Methode, working on Linux/BSD/Unix/OSX >
-sleep (x = FLOAT) > S: "sleep $x";
-
-< STD - clear text in terminal >
-clear () > S: "clear";
-
-< STD - For loop >
-for (min = INT, max = INT, lambda = (x) { O: x, '\n'; }) {
-    (min < max + 1) -> {
-        lambda (min);
-        min += 1;
+    < STD - Read Methode >
+    read (type = INT) {
+        var x = type;
+        I: &x;
+        ret x;
     }
-}
 
-< STD - exit >
-exit (status = INT) {
-    O: "\nExit status: $status\n";
-    jump -1;
-}
+    < STD - Print Methode >
+    print (x) > O: x, '\n';
 
-< STD - abs make negative numbers positive >
-< TODO: make it better - fix bugs >
-abs (x) > (x < 0) { ret x * (-1); } { ret x; };
+    < STD - Sleep Methode, working on Linux/BSD/Unix/OSX >
+    sleep (x = FLOAT) > S: "sleep $x";
+
+    < STD - clear text in terminal >
+    clear () > S: "clear";
+
+    < STD - For loop >
+    for (min = INT, max = INT, lambda = (x) { O: x, '\n'; }) {
+        (min < max + 1) -> {
+            lambda (min);
+            min += 1;
+        }
+    }
+
+    < STD - exit >
+    exit (status = INT) {
+        O: "\nExit status: $status\n";
+        jump -1;
+    }
+
+    < STD - abs make negative numbers positive >
+    abs (x) > (x < 0) { ret x * (-1); } { ret x; };
+< END - Koala's Standart Library >
 
 
 < Example program >
 
-for ('a', 'z', (i) { 
-    O: "$i\n";
-});
 
-for (read (), read (), (i) { 
-    for (0, 9, (j) { 
-        O: "$j";
+
+
+< Used to try to fix stack! >
+test (fun, t = 2) {
+    < Called 2 times >
+    (t > 0) -> {
+        fun (t);
+        t -= 1;
+    }
+}
+
+test ((t1) {
+    test ((t2) {
+        O: "Called fun 2 -> $t2\n";
     });
-    O: "\n";
+    < $test.t does not work ! >
+    O: "Called fun 1 -> $t1 -> ${test.t}\n";
 });
 
 
+
+
+< Example Calculation-Program with integrated strings >
+<
+    var a = 4, b = 2;
+    print ("$a + $b = ${ a + b }");
+>
+
+
+
+< ABC-Program using std-for >
+<
+    for ('a', 'z', (i) { O: "$i\n"; });
+>
+
+
+
+< Failed duo wrong stack BUG FIX NEEDED! >
+<
+    for (read (), read (), (i) { 
+        for (0, 9, (j) { 
+            O: "$j";
+        });
+        O: "\n";
+    });
+>

@@ -355,7 +355,7 @@ int fr_run (const Registry* register_list)
             {
                 stack[stack_size ++] = fr_get_memory_value (reg->reg_values[0]);
 //                printf ("PUSH>>>%d\n",fr_get_memory (reg->reg_values[0]));
-                printf ("PUSH>>>%d\n", stack_size);
+//                printf ("PUSH>>>%d\n", stack_size);
                 stack = realloc (stack, sizeof (Memory) * (stack_size + 1));
                 continue;
             }
@@ -364,7 +364,7 @@ int fr_run (const Registry* register_list)
                 if (stack_size == 0)
                     continue;
 //                printf ("POP>>>%d\n",stack[stack_size-1].value);
-                printf ("POP>>>%d\n",stack_size);
+//                printf ("POP>>>%d\n",stack_size);
                 stack = realloc (stack, sizeof (Memory) * stack_size);
                 register_list[(intptr_t)fr_get_memory (reg->reg_values[0])]->reg_values[0] = stack[stack_size -= 1];
                 continue;

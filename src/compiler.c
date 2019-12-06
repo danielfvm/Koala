@@ -340,7 +340,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     }
 
     // Doesn't work with ´\´ and ´\\´
-    Value create_filled_in_str (char* text)
+    Value create_filled_in_str (char* text, Value (fr_convert_to_value) (char* text))
     {
         text = str_replace (str_replace (str_replace (str_replace (str_replace (str_replace (text, "\\\\", "$/638$"), "\\\"", "\""), "\\r", "\r"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\");
 
@@ -359,36 +359,59 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             if (text[i] != '$' || !(i == 0 || text[i-1] != '\\'))
                 continue;
 
-            varname = "";
-
-            for (j = 0; j < variable_count; ++ j)
+            if (text[i + 1] == '{')
             {
-                cvar = (*variables)[j].name;
+                int last_bracket = cms_find_next_bracket (++ i, text);
 
-                if (cvar[0] == '\0' || strlen (cvar) > strlen (text + i + 1))
+                if (!has_variables)
+                {
+                    m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_STR ("")));
+                    has_variables = 1;
+                }
+
+                text[i - 1] = '\0';
+                text[i] = '\0';
+
+                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
+                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), fr_convert_to_value (_substr (text+i+1, 0, last_bracket - i - 1))));
+
+                text += last_bracket + 1;
+                i = 0;
+                
+            }
+            else
+            {
+                varname = "";
+
+                for (j = 0; j < variable_count; ++ j)
+                {
+                    cvar = (*variables)[j].name;
+
+                    if (cvar[0] == '\0' || strlen (cvar) > strlen (text + i + 1))
+                        continue;
+                    tvar = _substr (text, i + 1, i + 1 + strlen (cvar));
+                    if (!strcmp (cvar, tvar) && strlen (varname) < strlen (cvar))
+                        varname = cvar;
+                    free (tvar);
+                }
+
+                if (varname[0] == '\0')
                     continue;
-                tvar = _substr (text, i + 1, i + 1 + strlen (cvar));
-                if (!strcmp (cvar, tvar) && strlen (varname) < strlen (cvar))
-                    varname = cvar;
-                free (tvar);
+
+                if (!has_variables)
+                {
+                    m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_STR ("")));
+                    has_variables = 1;
+                }
+
+                text[i] = '\0';
+
+                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
+                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), POINTER (var_get_pos_by_name (varname))));
+
+                text += i + 1 + strlen (varname);
+                i = 0;
             }
-
-            if (varname[0] == '\0')
-                continue;
-
-            if (!has_variables)
-            {
-                m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_STR ("")));
-                has_variables = 1;
-            }
-
-            text[i] = '\0';
-
-            fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
-            fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), POINTER (var_get_pos_by_name (varname))));
-
-            text += i + 1 + strlen (varname);
-            i = 0;
         }
 
         if (has_variables)
@@ -593,7 +616,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         {
             text ++; // Remove first ´"´
             text[strlen (text) - 1] = '\0'; // Remove last ´"´
-            return create_filled_in_str(text);
+            return create_filled_in_str(text, fr_convert_to_value);
         }
 
         // ´text´ is a ´char´
