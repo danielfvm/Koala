@@ -23,6 +23,7 @@ enum Execution
     ADD,
     SUB,
     MUL,
+    MOD,
     DIV,
     SET,
     SYS,
@@ -105,6 +106,8 @@ Register* REGISTER_SUB (Value m_index, Value m_sub);
 
 Register* REGISTER_MUL (Value m_index, Value m_mul);
 
+Register* REGISTER_MOD (Value m_index, Value m_mul);
+
 Register* REGISTER_CIN (Value m_index);
 
 Register* REGISTER_DIV (Value m_index, Value m_div);
@@ -125,7 +128,7 @@ Register* REGISTER_BEQ (Value m_value1, Value m_value2, Value not_position);
 
 Register* REGISTER_SEQ (Value m_value1, Value m_value2, Value not_position);
 
-Register* REGISTER_JMP (Value position);
+Register* REGISTER_JUMP (Value position);
 
 Register* REGISTER_OUT (Value m_index);
 

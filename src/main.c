@@ -31,6 +31,15 @@ char* read_file (const char* filepath)
     return buffer;
 }
 
+/*
+void* cast_to_void_ptr (float value)
+{
+    float* ptr = malloc (sizeof (float));
+    (*ptr) = value;
+    return ptr;
+}
+*/
+
 int main (int argc, char** argv)
 {
     fr_compiler_init ();

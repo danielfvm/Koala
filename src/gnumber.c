@@ -470,7 +470,7 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
             in_brackets --;
 
         // Skips at beginning & if it is not a compute
-        if ((calc[i] != '+' && calc[i] != '-' && calc[i] != '*' && calc[i] != '/') || i == 0)
+        if ((calc[i] != '+' && calc[i] != '-' && calc[i] != '*' && calc[i] != '/' && calc[i] != '%') || i == 0)
             continue;
 
         if (in_string || in_char || in_brackets)
@@ -489,7 +489,7 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
 
         // Moves index till no compute was found, or value was found
         // Used to allow using ´+´ or ´-´ after ´*´ or ´/´ (used for negative values, no brackets needed)
-        for (j = 1; i + j < calc_len && (calc[i+j] == '+' || calc[i+j] == '-' || calc[i+j] == '*' || calc[i+j] == '/'); ++ j, ++ i);
+        for (j = 1; i + j < calc_len && (calc[i+j] == '+' || calc[i+j] == '-' || calc[i+j] == '*' || calc[i+j] == '/' || calc[i+j] == '%'); ++ j, ++ i);
     }
 
     // Insert value
@@ -528,7 +528,9 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
         // Calculating mul or div depending on compute
         if (compute == '*')
             fr_register_add (register_list, REGISTER_MUL (VALUE_INT (alloc_value), array[i + 1]));
-        else
+        else if (compute == '%')
+            fr_register_add (register_list, REGISTER_MOD (VALUE_INT (alloc_value), array[i + 1]));
+        else if (compute == '/')
             fr_register_add (register_list, REGISTER_DIV (VALUE_INT (alloc_value), array[i + 1]));
 
         // Override changes over the rest of the array 

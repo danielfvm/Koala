@@ -277,11 +277,13 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     CmsTemplate* cms_template;
 
     // Returns the index of variable by given name
-    int var_get_pos_by_name (const char* name)
+    int var_get_pos_by_name (const char* name, bool wants_to_modify)
     {
+        Variable variable;
         char* full_var_name;
+        int i;
 
-        for (int i = variable_count - 1; i >= 0; -- i)
+        for (i = variable_count - 1; i >= 0; -- i)
         {
             full_var_name = malloc (strlen ((*variables)[i].function_path) + strlen ((*variables)[i].name) + 2);
             sprintf (full_var_name, "%s.%s", (*variables)[i].function_path, (*variables)[i].name);
@@ -290,16 +292,24 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 
             free (full_var_name);
 
-            if (exist)
-                return (*variables)[i].position;
+            if (!exist)
+                continue;
+
+            variable = (*variables)[i];
+            goto var_get_pos_by_name_return;
         }
 
         // Variable in same scope
-        for (int i = variable_count - 1; i >= 0; -- i)
-            if (!strcmp ((*variables)[i].name, name))
-                return (*variables)[i].position;
+        for (i = variable_count - 1; i >= 0; -- i)
+        {
+            if (strcmp ((*variables)[i].name, name))
+                continue;
 
-        for (int i = variable_count - 1; i >= 0; -- i)
+            variable = (*variables)[i];
+            goto var_get_pos_by_name_return;
+        }
+
+        for (i = variable_count - 1; i >= 0; -- i)
         {
             full_var_name = malloc (strlen ((*variables)[i].function_path) + strlen ((*variables)[i].name) + 2);
             sprintf (full_var_name, "%s.%s", (*variables)[i].function_path, (*variables)[i].name);
@@ -308,25 +318,34 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 
             free (full_var_name);
 
-            if (exist)
-                return (*variables)[i].position;
+            if (!exist)
+                continue;
+
+            variable = (*variables)[i];
+            goto var_get_pos_by_name_return;
         }
 
         return -1;
+
+        var_get_pos_by_name_return: 
+
+        if (variable.constant && wants_to_modify)
+            error ("Variable ´%s´ is constant!", variable.name);
+            
+        return variable.position;
     }
 
     // Add new variable to list ´variables´
-    size_t var_add_function_path (char* path, char* name, size_t m_index)
+    size_t var_add_function_path (char* path, char* name, size_t m_index, bool constant)
     {
         (*variables) = realloc (*variables, sizeof (Variable) * (variable_count + 1));
 
         if (!(*variables)) 
             error ("Failed to add new variable ´%s´ to variables, ´realloc´ failed!", name);
 
-//        printf ("Alloc %s at %d!\n", name, m_index);
-
         (*variables)[variable_count].position = m_index; 
-        (*variables)[variable_count].name = name; 
+        (*variables)[variable_count].constant = constant;
+        (*variables)[variable_count].name = name;
         strcpy ((*variables)[variable_count].function_path = malloc (strlen (path) + 1), path); 
 
         variable_count ++;
@@ -334,9 +353,9 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         return m_index;
     }
 
-    size_t var_add (char* name, size_t m_index)
+    size_t var_add (char* name, size_t m_index, bool constant)
     {
-        var_add_function_path (function_path, name, m_index);
+        var_add_function_path (function_path, name, m_index, constant);
     }
 
     // Doesn't work with ´\´ and ´\\´
@@ -406,7 +425,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
                 text[i] = '\0';
 
                 fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
-                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), POINTER (var_get_pos_by_name (varname))));
+                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), POINTER (var_get_pos_by_name (varname, false))));
 
                 text += i + 1 + strlen (varname);
                 i = -1;
@@ -456,7 +475,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         fr_register_add (&register_list, REGISTER_SET (POINTER (m_tmp), VALUE_INT (fr_get_current_register_position (&register_list) + 2)));
 
         // Calling jump
-        fr_register_add (&register_list, REGISTER_JMP (position));
+        fr_register_add (&register_list, REGISTER_JUMP (position));
 
         // pops old variable __origin__ from stack 
         fr_register_add (&register_list, REGISTER_POP (POINTER (m_tmp)));
@@ -508,17 +527,17 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
                 args[i][equal_pos - 1] = '\0';
                 m_value = fr_convert_to_value (args[i] + equal_pos); // - 1
                 ctrim (&args[i]);
-                var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (m_value)));
+                var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (m_value)), false);
             }
             else
             {
-                var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0/*-2*/))));
+                var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))), false);
             }
         }
 
         // first default argument, ´__origin__´ used to determine where to go back
         sprintf (var_name = malloc (10 + 1), "__origin__");
-        var_add (var_name, fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (-1))));
+        var_add (var_name, fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (-1))), false);
 
 
         // Allocate memory for function position
@@ -526,10 +545,10 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         Value value_funk_position = VALUE_INT (fr_get_current_register_position (&register_list) + 2);
         func_pos = fr_register_add (&register_list, REGISTER_ALLOC (value_funk_position));
         if (func_name != NULL)
-            var_add_function_path (old_function_path, func_name, func_pos);
+            var_add_function_path (old_function_path, func_name, func_pos, false);
 
         // Jump to end of functions body, will not happen if function is called
-        size_t x = fr_register_add (&register_list, REGISTER_JMP (VALUE_INT (-1)));
+        size_t x = fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (-1)));
 
         // Allocate memory for function return
         fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
@@ -541,7 +560,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         in_function = old_in_function;
          
         // Jump to call position (location of call saved in ´__origin__´)
-        fr_register_add (&register_list, REGISTER_JMP (fr_convert_to_value (var_name)));
+        fr_register_add (&register_list, REGISTER_JUMP (fr_convert_to_value (var_name)));
 
         // Set skip jump to current location of register
         register_list[x]->reg_values[0] = VALUE_INT (fr_get_current_register_position(&register_list));
@@ -587,10 +606,10 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             strcpy (v1_text = malloc (is_bigger), text);
             v1_text[is_bigger - 1] = '\0';
 
-            strcpy (v2_text = malloc (strlen (text) - is_bigger), text + is_bigger);
+            strcpy (v2_text = malloc (strlen (text) - is_bigger), text + is_bigger + (text[is_bigger] == '=' ? 1 : 0));
 
             int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
-            fr_register_add (&register_list, REGISTER_BIG (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
+            fr_register_add (&register_list, (text[is_bigger] == '=' ? REGISTER_BEQ : REGISTER_BIG) (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
             return POINTER (m_index);
         }
         else if (is_smaller)
@@ -598,33 +617,27 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             strcpy (v1_text = malloc (is_smaller), text);
             v1_text[is_smaller - 1] = '\0';
 
-            strcpy (v2_text = malloc (strlen (text) - is_smaller), text + is_smaller);
+            strcpy (v2_text = malloc (strlen (text) - is_smaller), text + is_smaller + (text[is_smaller] == '=' ? 1 : 0));
 
             int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
-            fr_register_add (&register_list, REGISTER_SMA (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
+            fr_register_add (&register_list, (text[is_smaller] == '=' ? REGISTER_SEQ : REGISTER_SMA) (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
             return POINTER (m_index);
         }
 
-        // ´text´ is a ´string´
-        if (!is_str_concat (text))
+        if (!is_str_concat (text)) // ´text´ is a ´string´
         {
-            text ++; // Remove first ´"´
-            text[strlen (text) - 1] = '\0'; // Remove last ´"´
+            text[strlen (text ++) - 1] = '\0'; // Remove last ´"´
             return create_filled_in_str(text, fr_convert_to_value);
         }
-
-        // ´text´ is a ´char´
-        if ((text[0] == '\'' && text[strlen (text) - 1] == '\''))
+        else if ((text[0] == '\'' && text[strlen (text) - 1] == '\'')) // ´text´ is a ´char´
         {
-            text ++; // Remove first ´'´
-            text[strlen (text) - 1] = '\0'; // Remove last ´'´
+            text[strlen (text ++) - 1] = '\0'; // Remove last ´'´
             return VALUE_CHAR (str_replace (str_replace (str_replace (str_replace (str_replace (str_replace (str_replace (text, "\\\\", "$/638$"), "\\'", "'"), "\\r", "\r"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\"), "\\'", "'")[0]);
         }
 
         // Check if text is a ´int´ or ´float´
         bool var_is_number = 1;
         bool var_is_float  = 1;
-        bool var_contains_sign = contains (text, '+') || contains (text, '-') || contains (text, '*') || contains (text, '/');
 
         for (size_t i = 0; text[i] != '\0'; ++ i)
         {
@@ -645,8 +658,8 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         if (var_is_float)
             return VALUE_FLOAT (atof (text));
 
-        // TODO: CALCULATING check if text contain +/-*
-        if (var_contains_sign)
+        // calculation
+        if (contains (text, '+') || contains (text, '-') || contains (text, '*') || contains (text, '/') || contains (text, '%'))
             return gna_registry_calculation_simple (&register_list, text, fr_convert_to_value);
 
 
@@ -668,7 +681,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             trim (&func_args);
 
             // Check if function exist
-            if (var_get_pos_by_name (func_name) != -1)
+            if (var_get_pos_by_name (func_name, false) != -1)
                 return create_call_function (func_name, func_args, fr_convert_to_value);
         }
 
@@ -698,57 +711,40 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 
         // ´text´ is a variable and returns value -> ´pointer´
         int var_position;
-        if ((var_position = var_get_pos_by_name (text)) != -1)
+        if ((var_position = var_get_pos_by_name (text, false)) != -1)
             return POINTER (var_position);
        
         // ´text´ is a variable and returns position ´int´ of variable
-        if (text[0] == '&')
+        if (text[0] == '&' || text[0] == '~' || text[0] == '!')
         {
             char* tmp_text = malloc (strlen (text));
             strcpy (tmp_text, text + 1);
         
             trim (&tmp_text);
-
-            if ((var_position = var_get_pos_by_name (tmp_text)) != -1)
+            
+            if (text[0] == '!')
+            {
+                size_t x = fr_register_add (&register_list, REGISTER_ALLOC (fr_convert_to_value (tmp_text)));
+                fr_register_add (&register_list, REGISTER_NEG (VALUE_INT (x)));
+                return POINTER (x);
+            }
+            else if (text[0] == '~')
+                return POINTER_POINTER (fr_register_add (&register_list, REGISTER_ALLOC (fr_convert_to_value (tmp_text))));
+            else if (text[0] == '&' && (var_position = var_get_pos_by_name (tmp_text, false)) != -1)
                 return VALUE_INT (var_position);
-        }
-        else if (text[0] == '~')
-        {
-            char* tmp_text = malloc (strlen (text));
-            strcpy (tmp_text, text + 1);
-        
-            trim (&tmp_text);
-
-            size_t x = fr_register_add (&register_list, REGISTER_ALLOC (fr_convert_to_value (tmp_text)));
-            return POINTER_POINTER (x);
-        }
-        else if (text[0] == '!')
-        {
-            char* tmp_text = malloc (strlen (text));
-            strcpy (tmp_text, text + 1);
-        
-            trim (&tmp_text);
-
-            size_t x = fr_register_add (&register_list, REGISTER_ALLOC (fr_convert_to_value (tmp_text)));
-            fr_register_add (&register_list, REGISTER_NEG (VALUE_INT (x)));
-            return POINTER (x);
         }
 
         // Error variable does not exist!
         error ("Variable ´%s´ does not exist in this scope!\n", text);
     }
 
-
-
-    void c_alloc (CmsData* data, int size)
+    void fr_do_alloc (char* values, bool constant)
     {
         char** args;
-        size_t length = split (data[0], ',', &args);
+        size_t length = split (values, ',', &args);
+        size_t equal_pos;
 
         Value  m_value;
-
-        size_t equal_pos;
-        size_t func_pos;
 
         // recieved parameters
         for (int i = 0; i < length; ++ i) 
@@ -759,50 +755,56 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
                 args[i][equal_pos - 1] = '\0';
                 m_value = fr_convert_to_value (args[i] + equal_pos); // - 1
                 trim (&args[i]);
-                var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (m_value)));
+                var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (m_value)), constant);
+                continue;
             }
-            else
-            {
-                var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))));
-            }
+            var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))), constant);
         }
+    }
+
+    void c_alloc (CmsData* data, int size)
+    {
+        fr_do_alloc (data[0], false);
+    }
+
+    void c_alloc_const (CmsData* data, int size)
+    {
+        fr_do_alloc (data[0], true);
     }
 
     void c_clabel (CmsData* data, int size)
     {
-        var_add_function_path ("local", data[0], fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (fr_get_current_register_position (&register_list)))));
+        var_add_function_path ("local", data[0], fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (fr_get_current_register_position (&register_list)))), true);
     }
 
     void c_jlabel (CmsData* data, int size)
     {
-        fr_register_add (&register_list, REGISTER_JMP (fr_convert_to_value (data[0])));
+        fr_register_add (&register_list, REGISTER_JUMP (fr_convert_to_value (data[0])));
     }
-
-
 
     void c_set (CmsData* data, int size)
     {
-        fr_register_add (&register_list, REGISTER_SET (VALUE_INT (var_get_pos_by_name (data[0])), fr_convert_to_value (data[1])));
+        fr_register_add (&register_list, REGISTER_SET (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1])));
     }
 
     void c_add (CmsData* data, int size)
     {
-        fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (var_get_pos_by_name (data[0])), fr_convert_to_value (data[1])));
+        fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1])));
     }
 
     void c_sub (CmsData* data, int size)
     {
-        fr_register_add (&register_list, REGISTER_SUB (VALUE_INT (var_get_pos_by_name (data[0])), fr_convert_to_value (data[1])));
+        fr_register_add (&register_list, REGISTER_SUB (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1])));
     }
 
     void c_mul (CmsData* data, int size)
     {
-        fr_register_add (&register_list, REGISTER_MUL (VALUE_INT (var_get_pos_by_name (data[0])), fr_convert_to_value (data[1])));
+        fr_register_add (&register_list, REGISTER_MUL (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1])));
     }
 
     void c_div (CmsData* data, int size)
     {
-        fr_register_add (&register_list, REGISTER_DIV (VALUE_INT (var_get_pos_by_name (data[0])), fr_convert_to_value (data[1])));
+        fr_register_add (&register_list, REGISTER_DIV (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1])));
     }
 
 
@@ -831,8 +833,6 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     {
         fr_register_add (&register_list, REGISTER_DIV (fr_convert_to_value (data[0]), fr_convert_to_value (data[1])));
     }
-
-
 
     void c_print (CmsData* data, int size)
     {
@@ -923,7 +923,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 
         size_t x = fr_register_add (&register_list, REGISTER_NEQ (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
         fr_compile (data[1], variables, variable_count);
-        fr_register_add (&register_list, REGISTER_JMP (VALUE_INT (loop_index)));
+        fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (loop_index)));
         register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
     }
 
@@ -936,7 +936,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         {
             fr_compile (data[1], variables, variable_count);
         }
-        size_t y = fr_register_add (&register_list, REGISTER_JMP (VALUE_INT (0)));
+        size_t y = fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (0)));
         register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
         {
             fr_compile (data[2], variables, variable_count);
@@ -953,7 +953,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         {
             fr_compile (data[1], variables, variable_count);
         }
-        size_t y = fr_register_add (&register_list, REGISTER_JMP (VALUE_INT (0)));
+        size_t y = fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (0)));
         register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
         {
             fr_compile (data[2], variables, variable_count);
@@ -980,7 +980,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     void c_return (CmsData* data, int size)
     {
         fr_register_add (&register_list, REGISTER_SET (VALUE_INT (in_function + 2), fr_convert_to_value (data[0])));
-        fr_register_add (&register_list, REGISTER_JMP (POINTER (in_function - 1)));
+        fr_register_add (&register_list, REGISTER_JUMP (POINTER (in_function - 1)));
     }
 
     // Check if c_check_else & c_check can be replaced with c_bracket...
@@ -990,6 +990,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         cms_add ("# ( % ) > % ;",          c_function_short,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) ;",   c_call,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("var % ;",     c_alloc,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("val % ;",     c_alloc_const,     CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("~ # += % ;",  c_add_pointer,     CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("~ # -= % ;",  c_sub_pointer,     CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("~ # *= % ;",  c_mul_pointer,     CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);

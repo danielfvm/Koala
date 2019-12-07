@@ -1,10 +1,15 @@
 #include "interpreter.h"
 
+#define bool char
+#define true  1
+#define false 0
+
 typedef struct
 {
     size_t position;
-    char*  name;
+    char   constant;
     char*  function_path;
+    char*  name;
 } Variable;
 
 void  fr_compiler_init ();

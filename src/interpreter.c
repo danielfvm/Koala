@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <math.h>
 
 void fr_register_create (Registry** register_list)
 {
@@ -15,8 +14,6 @@ size_t fr_register_add (Registry** register_list, Register* reg)
 {
     size_t i;
 
-//    printf (">%s\n", fr_get_register_type_as_name (reg));
-
     for (i = 0; (*register_list)[i]; ++ i);
 
     (*register_list) = realloc (*register_list, sizeof (Register) * (i + 1));    
@@ -27,6 +24,7 @@ size_t fr_register_add (Registry** register_list, Register* reg)
     return i;
 }
 
+/*
 size_t fr_register_add_all (Registry** register_list, Register** regs)
 {
     size_t position;
@@ -36,6 +34,7 @@ size_t fr_register_add_all (Registry** register_list, Register** regs)
 
     return position;
 }
+*/
 
 size_t fr_get_current_register_position (Registry** register_list)
 {
@@ -46,6 +45,7 @@ size_t fr_get_current_register_position (Registry** register_list)
     return i;
 }
 
+/*
 char* fr_get_register_type_as_name (Register* reg)
 {
     switch (reg->reg_type)
@@ -73,6 +73,7 @@ char* fr_get_register_type_as_name (Register* reg)
 
     return "NONE";
 }
+*/
 
 Value POINTER (int m_pointer)
 {
@@ -111,9 +112,16 @@ Value VALUE_INT (int value)
     return (Value) { DT_INT, VALUE_TYPE_VALUE, (void*)(intptr_t) value };
 }
 
+
+
 Value VALUE_FLOAT (float value)
 {
     return (Value) { DT_FLOAT, VALUE_TYPE_VALUE, (void*)(long long)(value * FLOAT_CONV_VALUE) };
+}
+
+Value VALUE_NULL ()
+{
+    return (Value) { DT_NONE, VALUE_TYPE_VALUE, NULL };
 }
 
 Value VALUE_VALUE (Value value)
@@ -121,193 +129,134 @@ Value VALUE_VALUE (Value value)
     return (Value) { value.data_type, value.index, value.value };
 }
 
-Register* REGISTER_ALLOC (Value m_value)
+Register* CREATE_REGISTER_1 (byte type, Value one)
+{
+    Register* reg   = malloc (sizeof *reg);
+    reg->reg_values = malloc (sizeof *reg->reg_values);
+    reg->reg_type   = type;
+    reg->reg_values[0] = one;
+    return reg;
+}
+
+Register* CREATE_REGISTER_2 (byte type, Value one, Value two)
 {
     Register* reg   = malloc (sizeof *reg);
     reg->reg_values = malloc (sizeof *reg->reg_values * 2);
-    reg->reg_type   = ALLOC;
-    reg->reg_values[0].value = NULL /* Stored Value */;
-    reg->reg_values[1] = m_value;
+    reg->reg_type   = type;
+    reg->reg_values[0] = one;
+    reg->reg_values[1] = two;
     return reg;
+}
+
+Register* CREATE_REGISTER_3 (byte type, Value one, Value two, Value three)
+{
+    Register* reg   = malloc (sizeof *reg);
+    reg->reg_values = malloc (sizeof *reg->reg_values * 3);
+    reg->reg_type   = type;
+    reg->reg_values[0] = one;
+    reg->reg_values[1] = two;
+    reg->reg_values[2] = three;
+    return reg;
+}
+
+Register* REGISTER_ALLOC (Value m_value)
+{
+    return CREATE_REGISTER_2 (ALLOC, VALUE_NULL (), m_value);
 }
 
 Register* REGISTER_ADD (Value m_index, Value m_add)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values * 2);
-    reg->reg_type   = ADD;
-    reg->reg_values[0] = m_index;
-    reg->reg_values[1] = m_add;
-    return reg;
+    return CREATE_REGISTER_2 (ADD, m_index, m_add);
 }
 
 Register* REGISTER_SUB (Value m_index, Value m_sub)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values * 2);
-    reg->reg_type   = SUB;
-    reg->reg_values[0] = m_index;
-    reg->reg_values[1] = m_sub;
-    return reg;
+    return CREATE_REGISTER_2 (SUB, m_index, m_sub);
 }
 
 Register* REGISTER_MUL (Value m_index, Value m_mul)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values * 2);
-    reg->reg_type   = MUL;
-    reg->reg_values[0] = m_index;
-    reg->reg_values[1] = m_mul;
-    return reg;
+    return CREATE_REGISTER_2 (MUL, m_index, m_mul);
 }
 
-Register* REGISTER_CIN (Value m_index)
+Register* REGISTER_MOD (Value m_index, Value m_mul)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values);
-    reg->reg_type   = CIN;
-    reg->reg_values[0] = m_index;
-    return reg;
+    return CREATE_REGISTER_2 (MOD, m_index, m_mul);
 }
 
 Register* REGISTER_DIV (Value m_index, Value m_div)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values * 2);
-    reg->reg_type   = DIV;
-    reg->reg_values[0] = m_index;
-    reg->reg_values[1] = m_div;
-    return reg;
+    return CREATE_REGISTER_2 (DIV, m_index, m_div);
+}
+
+Register* REGISTER_CIN (Value m_index)
+{
+    return CREATE_REGISTER_1 (CIN, m_index);
 }
 
 Register* REGISTER_SET (Value m_index, Value m_value)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values * 2);
-    reg->reg_type   = SET;
-    reg->reg_values[0] = m_index;
-    reg->reg_values[1] = m_value;
-    return reg;
+    return CREATE_REGISTER_2 (SET, m_index, m_value);
 }
 
 Register* REGISTER_EQ (Value m_value1, Value m_value2, Value not_position)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values * 3);
-    reg->reg_type   = EQ;
-    reg->reg_values[0] = m_value1;
-    reg->reg_values[1] = m_value2;
-    reg->reg_values[2] = not_position;
-    return reg;
+    return CREATE_REGISTER_3 (EQ, m_value1, m_value2, not_position);
 }
 
 Register* REGISTER_NEQ (Value m_value1, Value m_value2, Value not_position)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values * 3);
-    reg->reg_type   = NEQ;
-    reg->reg_values[0] = m_value1;
-    reg->reg_values[1] = m_value2;
-    reg->reg_values[2] = not_position;
-    return reg;
+    return CREATE_REGISTER_3 (NEQ, m_value1, m_value2, not_position);
 }
 
 Register* REGISTER_SYS (Value cmd)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values);
-    reg->reg_type   = SYS;
-    reg->reg_values[0] = cmd;
-    return reg;
+    return CREATE_REGISTER_1 (SYS, cmd);
 }
 
 Register* REGISTER_BIG (Value m_value1, Value m_value2, Value not_position)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values * 3);
-    reg->reg_type   = BIG;
-    reg->reg_values[0] = m_value1;
-    reg->reg_values[1] = m_value2;
-    reg->reg_values[2] = not_position;
-    return reg;
+    return CREATE_REGISTER_3 (BIG, m_value1, m_value2, not_position);
 }
 
 Register* REGISTER_SMA (Value m_value1, Value m_value2, Value not_position)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values * 3);
-    reg->reg_type   = SMA;
-    reg->reg_values[0] = m_value1;
-    reg->reg_values[1] = m_value2;
-    reg->reg_values[2] = not_position;
-    return reg;
+    return CREATE_REGISTER_3 (SMA, m_value1, m_value2, not_position);
 }
 
 Register* REGISTER_BEQ (Value m_value1, Value m_value2, Value not_position)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values * 3);
-    reg->reg_type   = BEQ;
-    reg->reg_values[0] = m_value1;
-    reg->reg_values[1] = m_value2;
-    reg->reg_values[2] = not_position;
-    return reg;
+    return CREATE_REGISTER_3 (BEQ, m_value1, m_value2, not_position);
 }
 
 Register* REGISTER_SEQ (Value m_value1, Value m_value2, Value not_position)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values * 3);
-    reg->reg_type   = SEQ;
-    reg->reg_values[0] = m_value1;
-    reg->reg_values[1] = m_value2;
-    reg->reg_values[2] = not_position;
-    return reg;
+    return CREATE_REGISTER_3 (SEQ, m_value1, m_value2, not_position);
 }
 
-Register* REGISTER_JMP (Value position)
+Register* REGISTER_JUMP (Value position)
 {
-    Register* reg   = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values);
-    reg->reg_type   = JUMP;
-    reg->reg_values[0] = position;
-    return reg;
+    return CREATE_REGISTER_1 (JUMP, position);
 }
 
 Register* REGISTER_OUT (Value m_index)
 {
-    Register* reg = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values);
-    reg->reg_type = OUT;
-    reg->reg_values[0] = m_index;
-    return reg;
+    return CREATE_REGISTER_1 (OUT, m_index);
 }
 
 Register* REGISTER_NEG (Value m_index)
 {
-    Register* reg = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values);
-    reg->reg_type = NEG;
-    reg->reg_values[0] = m_index;
-    return reg;
+    return CREATE_REGISTER_1 (NEG, m_index);
 }
 
 Register* REGISTER_PUSH (Value m_index)
 {
-    Register* reg = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values);
-    reg->reg_type = PUSH;
-    reg->reg_values[0] = m_index;
-    return reg;
+    return CREATE_REGISTER_1 (PUSH, m_index);
 }
 
 Register* REGISTER_POP (Value m_index)
 {
-    Register* reg = malloc (sizeof *reg);
-    reg->reg_values = malloc (sizeof *reg->reg_values);
-    reg->reg_type = POP;
-    reg->reg_values[0] = m_index;
-    return reg;
+    return CREATE_REGISTER_1 (POP, m_index);
 }
 
 void fr_strcpy (char** dest, const char* src)
@@ -383,8 +332,7 @@ int fr_run (const Registry* register_list)
         {
             case PUSH:
             {
-                stack[stack_size].value = fr_get_memory (reg->reg_values[0]);
-                stack[stack_size].data_type = fr_get_data_type (reg->reg_values[0]);
+                stack[stack_size] = fr_get_memory_value (reg->reg_values[0]);
                 stack = realloc (stack, sizeof (Memory) * ((++ stack_size) + 1));
                 continue;
             }
@@ -393,26 +341,21 @@ int fr_run (const Registry* register_list)
                 if (stack_size == 0)
                     continue;
                 stack = realloc (stack, sizeof (Memory) * (stack_size --));
-                register_list[(intptr_t)fr_get_memory (reg->reg_values[0])]->reg_values[0].value = stack[stack_size].value;
-                register_list[(intptr_t)fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type = stack[stack_size].data_type;
+                register_list[(intptr_t)fr_get_memory (reg->reg_values[0])]->reg_values[0] = stack[stack_size];
                 continue;
             }
             case ALLOC:
             {
+                if ((reg->reg_values[0].data_type == DT_STRING || fr_get_data_type (reg->reg_values[1]) == DT_STRING) && reg->reg_values[0].value)
+                    free (reg->reg_values[0].value);
                 if (fr_get_data_type (reg->reg_values[1]) == DT_STRING)
                 {
-                    if (reg->reg_values[0].value)
-                        free (reg->reg_values[0].value);
                     char* text = fr_get_memory_value (reg->reg_values[1]).value;
                     strcpy (reg->reg_values[0].value = malloc (strlen (text) + 1), text);
                     reg->reg_values[0].data_type = DT_STRING;
                 }
                 else
-                {
-                    if (reg->reg_values[0].data_type == DT_STRING && reg->reg_values[0].value)
-                        free (reg->reg_values[0].value);
                     reg->reg_values[0] = fr_get_memory_value (reg->reg_values[1]);
-                }
                 continue;
             }
             case SET:
@@ -554,6 +497,16 @@ int fr_run (const Registry* register_list)
                     (*value) = (void*)(((intptr_t)(*value)) * m_value_mul);
                 continue;
             }
+            case MOD:
+            {
+                void** value = &register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].value;
+                intptr_t m_value_mod = (intptr_t) fr_get_memory (reg->reg_values[1]);
+                byte     data_type_add = fr_get_data_type (reg->reg_values[1]);
+                byte     data_type     = register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type;
+
+                (*value) = (void*)((intptr_t)(*value) % (data_type_add == DT_FLOAT ? (intptr_t)(m_value_mod / FLOAT_CONV_VALUE) : m_value_mod));
+                continue;
+            }
             case DIV:
             {
                 intptr_t m_value       = (intptr_t) fr_get_memory (reg->reg_values[0]);
@@ -585,27 +538,21 @@ int fr_run (const Registry* register_list)
             }
             case BEQ:
             {
-                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) < (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
-                    i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
+                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) >= (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
                 continue;
             }
             case SEQ:
             {
-                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) > (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
-                    i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
+                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) <= (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
                 continue;
             }
             case BIG:
             {
-//                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) <= (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
-//                    i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
                 fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) > (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
                 continue;
             }
             case SMA:
             {
-//                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) >= (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
-//                    i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
                 fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) < (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
                 continue;
             }
@@ -661,7 +608,6 @@ int fr_run (const Registry* register_list)
             case JUMP:
             {
                 i = (intptr_t) fr_get_memory (reg->reg_values[0]) - 1;
-//printf ("JUMP: %d\n", i);
                 continue;
             }
             case SYS:

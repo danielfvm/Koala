@@ -84,19 +84,39 @@
     });
 >
 
+< FUN with pointers >
+<
+    var a = 5, b = 10, c = 15;
+>
+    < print (~&a); also possible >
+<
+    print (a);
+    print (~(&a + 1));
+    print (~(&a + 2));
+>
+
+var x = 5;
+val y = 10;
+
+x += 5;
+O: x, '\n';
+
+y += 5;
+O: y, '\n';
+
 
 < ASCII - Table >
+<
+    var col = 7;
+    var rows = (int ('~') - int (' ')) / col + 1;
 
-var col = 7;
-var rows = (int ('~') - int (' ')) / col + 1;
-
-for (0, rows - 1, (i) {
-    for (0, col - 1, (j) {
-        var pos = int (' ') + i + j * rows;
-        (pos < int ('~') + 1) {
-            O: pos, ':', char (pos), '\t';
-        }
+    for (0, rows - 1, (i) {
+        for (0, col - 1, (j) {
+            var pos = int (' ') + i + j * rows;
+            (pos < int ('~') + 1) {
+                O: pos, ':', char (pos), '\t';
+            }
+        });
+        O: '\n';
     });
-    O: '\n';
-});
-
+>
