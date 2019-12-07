@@ -1,17 +1,16 @@
 < START - FOUND BUGS >
     < error message wrong line >
     < improve float system >
-    < cannot call for in for >
-    < wrong stack when calling function in function ! >
     < comment system does not work well >
+    < wrong position for arguments when calling functions with '=' >
 < END - FOUND BUGS >
 
 < START - Koala's Standart Library >
     < STD - DataTypes >
-    var STRING = "";
-    var CHAR   = ' ';
-    var INT    = 0;
-    var FLOAT  = 0.0;
+    var STR   = "";
+    var CHAR  = 'A' - 65;
+    var INT   = 0;
+    var FLOAT = 0.0;
 
     < STD - Read Methode >
     read (type = INT) {
@@ -45,33 +44,20 @@
 
     < STD - abs make negative numbers positive >
     abs (x) > (x < 0) { ret x * (-1); } { ret x; };
->
+
+    < STD - cast to char >
+    char (x) > ret CHAR + x;
+
+    < STD - cast to int >
+    int (x) > ret INT + x;
+
+    < STD - cast to string >
+    str (x) > ret STR + x;
+
 < END - Koala's Standart Library >
 
 
 < Example program >
-
-
-
-
-< Used to try to fix stack! >
-test (fun, t = 2) {
-    < Called 2 times >
-    (t > 0) -> {
-        fun (t);
-        t -= 1;
-    }
-}
-
-test ((t1) {
-    test ((t2) {
-        O: "Called fun 2 -> $t2\n";
-    });
-    < $test.t does not work ! >
-    O: "Called fun 1 -> $t1 -> ${test.t}\n";
-});
-
-
 
 
 < Example Calculation-Program with integrated strings >
@@ -88,13 +74,29 @@ test ((t1) {
 >
 
 
-
-< Failed duo wrong stack BUG FIX NEEDED! >
+< FUN with Pattern >
 <
     for (read (), read (), (i) { 
         for (0, 9, (j) { 
-            O: "$j";
+            O: "$i$j\t";
         });
         O: "\n";
     });
 >
+
+
+< ASCII - Table >
+
+var col = 7;
+var rows = (int ('~') - int (' ')) / col + 1;
+
+for (0, rows - 1, (i) {
+    for (0, col - 1, (j) {
+        var pos = int (' ') + i + j * rows;
+        (pos < int ('~') + 1) {
+            O: pos, ':', char (pos), '\t';
+        }
+    });
+    O: '\n';
+});
+
