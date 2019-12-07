@@ -376,8 +376,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
                 fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), fr_convert_to_value (_substr (text+i+1, 0, last_bracket - i - 1))));
 
                 text += last_bracket + 1;
-                i = 0;
-                
+                i = -1;
             }
             else
             {
@@ -410,7 +409,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
                 fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), POINTER (var_get_pos_by_name (varname))));
 
                 text += i + 1 + strlen (varname);
-                i = 0;
+                i = -1;
             }
         }
 
@@ -439,17 +438,17 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 
         size_t m_tmp_var;
 
+        int func_args_positions[length];
+
         // Arguments passed over call
         for (size_t i = 0; i < length; ++ i) 
         {
-            m_tmp_var = fr_register_add (&register_list, REGISTER_ALLOC (position));
+            func_args_positions[i] = m_tmp_var = fr_register_add (&register_list, REGISTER_ALLOC (position));
             fr_register_add (&register_list, REGISTER_SUB (VALUE_INT (m_tmp_var), VALUE_INT (i + 4)));
             fr_register_add (&register_list, REGISTER_PUSH (POINTER_POINTER (m_tmp_var))); // pushes variable to stack, used later to reset variable
             fr_register_add (&register_list, REGISTER_SET (POINTER (m_tmp_var), fr_convert_to_value (args[i])));
-//            puts ("push-set");
         }
 
-  //          puts ("push-fun");
         // Argument for location of call ´__origin__´
         size_t m_tmp = fr_register_add (&register_list, REGISTER_ALLOC (position));
         fr_register_add (&register_list, REGISTER_SUB (VALUE_INT (m_tmp), VALUE_INT (3)));
@@ -461,16 +460,10 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 
         // pops old variable __origin__ from stack 
         fr_register_add (&register_list, REGISTER_POP (POINTER (m_tmp)));
-    //        puts ("pop-fun");
 
         // pops variable to stack, used later to reset variable
-        for (int i = 0; i < length; ++ i) 
-        {
-            m_tmp_var = fr_register_add (&register_list, REGISTER_ALLOC (position));
-            fr_register_add (&register_list, REGISTER_SUB (VALUE_INT (m_tmp_var), VALUE_INT (i + 4)));
-            fr_register_add (&register_list, REGISTER_POP (POINTER (m_tmp_var)));
-      //      puts ("pop");
-        }
+        for (int i = length - 1; i >= 0; -- i) 
+            fr_register_add (&register_list, REGISTER_POP (POINTER (func_args_positions[i])));
 
         // Return value
         m_tmp_var = fr_register_add (&register_list, REGISTER_ALLOC (position));
