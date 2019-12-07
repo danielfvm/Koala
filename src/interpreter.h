@@ -76,6 +76,7 @@ size_t fr_register_add_all (Registry** register_list, Register** regs);
 
 size_t fr_get_current_register_position (Registry** register_list);
 
+char* fr_get_register_type_as_name (Register* reg);
 
 Value POINTER (int m_pointer);
 

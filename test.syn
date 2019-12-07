@@ -1,0 +1,29 @@
+test (x, y) {
+    O: x, y;
+}
+
+test (10, 20);
+
+
+ALLOC x;
+ALLOC y;
+ALLOC __origin__;
+test:
+POP_PUSH __origin__, 3, 
+POP_PUSH x, 3, 
+POP_PUSH y, 3, 
+
+PRINT x;
+PRINT y;
+
+POP y;
+POP x;
+POP __origin__;
+
+
+
+PUSH 20;
+PUSH 10;
+PUSH <__origin__>;
+jump test;
+

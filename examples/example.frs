@@ -3,6 +3,7 @@
     < improve float system >
     < cannot call for in for >
     < wrong stack when calling function in function ! >
+    < comment system does not work well >
 < END - FOUND BUGS >
 
 < START - Koala's Standart Library >
@@ -44,6 +45,7 @@
 
     < STD - abs make negative numbers positive >
     abs (x) > (x < 0) { ret x * (-1); } { ret x; };
+>
 < END - Koala's Standart Library >
 
 

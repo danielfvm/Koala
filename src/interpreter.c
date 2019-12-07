@@ -15,6 +15,8 @@ size_t fr_register_add (Registry** register_list, Register* reg)
 {
     size_t i;
 
+//    printf (">%s\n", fr_get_register_type_as_name (reg));
+
     for (i = 0; (*register_list)[i]; ++ i);
 
     (*register_list) = realloc (*register_list, sizeof (Register) * (i + 1));    
@@ -42,6 +44,34 @@ size_t fr_get_current_register_position (Registry** register_list)
     for (i = 0; (*register_list)[i]; ++ i);
 
     return i;
+}
+
+char* fr_get_register_type_as_name (Register* reg)
+{
+    switch (reg->reg_type)
+    {
+        case ALLOC: return "ALLOC";
+        case OUT: return "OUT";
+        case CIN: return "CIN";
+        case EQ: return "EQ";
+        case NEQ: return "NEQ";
+        case BIG: return "BIG";
+        case SMA: return "SMA";
+        case BEQ: return "BEQ";
+        case SEQ: return "SEQ";
+        case JUMP: return "JUMP";
+        case ADD: return "ADD";
+        case SUB: return "SUB";
+        case MUL: return "MUL";
+        case DIV: return "DIV";
+        case SET: return "SET";
+        case SYS: return "SYS";
+        case NEG: return "NEG";
+        case PUSH: return "PUSH";
+        case POP: return "POP";
+    }
+
+    return "NONE";
 }
 
 Value POINTER (int m_pointer)
@@ -353,20 +383,18 @@ int fr_run (const Registry* register_list)
         {
             case PUSH:
             {
-                stack[stack_size ++] = fr_get_memory_value (reg->reg_values[0]);
-//                printf ("PUSH>>>%d\n",fr_get_memory (reg->reg_values[0]));
-//                printf ("PUSH>>>%d\n", stack_size);
-                stack = realloc (stack, sizeof (Memory) * (stack_size + 1));
+                stack[stack_size].value = fr_get_memory (reg->reg_values[0]);
+                stack[stack_size].data_type = fr_get_data_type (reg->reg_values[0]);
+                stack = realloc (stack, sizeof (Memory) * ((++ stack_size) + 1));
                 continue;
             }
             case POP:
             {
                 if (stack_size == 0)
                     continue;
-//                printf ("POP>>>%d\n",stack[stack_size-1].value);
-//                printf ("POP>>>%d\n",stack_size);
-                stack = realloc (stack, sizeof (Memory) * stack_size);
-                register_list[(intptr_t)fr_get_memory (reg->reg_values[0])]->reg_values[0] = stack[stack_size -= 1];
+                stack = realloc (stack, sizeof (Memory) * (stack_size --));
+                register_list[(intptr_t)fr_get_memory (reg->reg_values[0])]->reg_values[0].value = stack[stack_size].value;
+                register_list[(intptr_t)fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type = stack[stack_size].data_type;
                 continue;
             }
             case ALLOC:
