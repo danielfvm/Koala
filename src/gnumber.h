@@ -2,9 +2,9 @@
 // gba     -> Gnumber Bool   Algebra
 // gna     -> Gnumber Normal Algebra
 
-#define bool char
-
 #include "interpreter.h"
+#include "util.h"
+
 
 char* _substr (const char* str, int m, int n);
 

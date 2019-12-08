@@ -1,6 +1,6 @@
 #include <stddef.h>
-// #define CMS_CALLBACK(x) ({ void _(CmsData* data, int size) x _; })
-#define CMS_LIST(x)     ({ void _() x; _; })
+
+#define CMS_LIST(x) ({ void _() x; _; })
 
 typedef void (*CmsData);
 typedef void (*CmsCallback) (CmsData* data, int size);

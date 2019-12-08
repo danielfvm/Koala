@@ -5,7 +5,8 @@ build:
 	gcc -c src/multisearcher.c -o obj/multisearcher.o
 	gcc -c src/interpreter.c -o obj/interpreter.o
 	gcc -c src/compiler.c -o obj/compiler.o
-	gcc obj/main.o obj/gnumber.o obj/multisearcher.o obj/compiler.o obj/interpreter.o -o bin/koala -lm
+	gcc -c src/util.c -o obj/util.o
+	gcc obj/main.o obj/gnumber.o obj/multisearcher.o obj/compiler.o obj/interpreter.o obj/util.o -o bin/koala -lm
 
 run:
 	./bin/koala

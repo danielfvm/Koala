@@ -8,222 +8,6 @@
 #include <string.h>
 #include <math.h>
 
-// Trims beginning and end of &string
-void trim (char** text)
-{
-    if (**text == '\0')
-        return;
-
-    // Trim begin
-    while (**text <= ' ')
-        (*text) ++;
-
-    // Trim end
-    for (size_t len = strlen (*text) - 1; (*text)[len] <= ' '; -- len)
-        (*text)[len] = '\0';
-}
-
-void ctrim (char** text)
-{
-    size_t i, j;
-    bool in_string = 0;
-    bool in_char   = 0;
-
-    for (i = 0; (*text)[i] != '\0'; ++ i)
-    {
-        if ((*text)[i] == '\\' && i >= 1 && (*text)[i-1] == '\\' && ++ i)
-            continue;
-
-        if ((*text)[i] == '"' && (i == 0 || (*text)[i-1] != '\\') && !in_char)
-            in_string = !in_string;
-
-        if ((*text)[i] == '\'' && (i == 0 || (*text)[i-1] != '\\') && !in_string)
-            in_char = !in_char;
-
-        if ((*text)[i] > ' ' || in_string || in_char)
-            continue;
-
-        for (j = i + 1; (*text)[j] != '\0'; ++ j)
-            (*text)[j - 1] = (*text)[j];
-        (*text)[j - 1] = '\0';
-    }
-}
-
-bool is_bracket (char c)
-{
-    return c == '(' || c == '[' || c == '{' || c == ')' || c == ']' || c == '}';
-}
-
-size_t contains (char* text, char c)
-{
-    bool in_string = 0;
-    bool in_char   = 0;
-    int in_bracket = 0;
-
-    for (size_t i = 0; text[i] != '\0'; ++ i)
-    {
-        if (text[i] == '\\' && i >= 1 && text[i-1] == '\\' && ++ i)
-            continue;
-
-        if (text[i] == '"' && (i == 0 || text[i-1] != '\\') && !in_char)
-            in_string = !in_string;
-
-        if (text[i] == '\'' && (i == 0 || text[i-1] != '\\') && !in_string)
-            in_char = !in_char;
-
-        if (text[i] == '(' || text[i] == '[' || text[i] == '{')
-            in_bracket ++;
-        if (text[i] == ')' || text[i] == ']' || text[i] == '}')
-            in_bracket --;
-
-        if (text[i] == c && (is_bracket (c) || (!in_string && !in_char && !in_bracket)))
-            return i + 1;
-    }
-    return 0;
-}
-
-bool is_str_concat (char* str)
-{
-    char* text = malloc (strlen (str) + 1);
-    strcpy (text, str);
-
-    ctrim (&text);
-
-    bool is_string = 0;
-
-    for (size_t i = 0; text[i] != '\0'; ++ i)
-    {
-        // continue if double '\'
-        if (text[i] == '\\' && i >= 1 && text[i-1] == '\\' && ++ i)
-            continue;
-
-        if (text[i] == '"' && (i == 0 || text[i-1] != '\\'))
-            is_string = !is_string;
-        else if (!is_string)
-        {
-            free (text);
-            return 1;
-        }
-    }
-
-    free (text);
-
-    return 0;
-}
-
-// Splits a string with a given delim saved in a *string passed as reference
-// TODO: double '\\' does not work!
-int split (char* buffer, char delim, char*** output)
-{
-    int  partCount = 0; // Count of splited elements used as index for ´output´
-    int  in_bracket = 0; // If ´inBracket´ bigger than 0 then ignore delim
-    bool in_string  = 0; // If ´inString´ eq 1 then ignore delim & brackets
-    bool in_char    = 0; // If ´inChar´ eq 1 then ignore delim & brackets
-
-    char* ptr;
-    char* lastPos;
-
-    buffer[strlen(buffer)] = '\0'; // Set buffers string end to end of string
-    (*output) = (char**) malloc (sizeof (char*)); // Allocate size
-
-    // Loop until end of buffer is reached
-    for (ptr = buffer, lastPos = buffer; *ptr != '\0'; ++ ptr)
-    {
-        // continue if double '\'
-        if (*ptr == '\\' && (ptr != buffer && *(ptr - 1) == '\\') && ++ ptr)
-            continue;
-
-        // Check if char is string
-        if (*ptr == '\"' && (ptr == buffer || *(ptr - 1) != '\\') && !in_char)
-            in_string = !in_string;
-
-        // Check if char is character
-        if (*ptr == '\'' && (ptr == buffer || *(ptr - 1) != '\\') && !in_string)
-            in_char = !in_char;
-
-        if (*ptr == '(' || *ptr == '[' || *ptr == '{')
-            in_bracket ++;
-        if (*ptr == ')' || *ptr == ']' || *ptr == '}')
-            in_bracket --;
-
-        // Ignore delim if it is in a String/Char/Bracket
-        if (*ptr != delim || in_string || in_char || in_bracket)
-            continue;
-
-        // Set splited substring in output and trim it
-        (*output)[partCount] = lastPos;
-        (*output)[partCount][ptr-lastPos] = '\0';
-        trim (&(*output)[partCount]);        
-
-        // Count ´partCount´ up
-        partCount ++;
-        
-        // Set ´lastPos´ which is used to generate substr
-        lastPos = ptr + 1;
-
-        // Realloc memory to string -> +1 char
-        (*output) = realloc (*output, sizeof (char*) * (partCount + 1));
-    }
-
-    // Set splited substring in output and trim it
-    (*output)[partCount] = lastPos;
-    trim (&(*output)[partCount]);
-
-    // Return ´partCount´ used to iterate through substr list
-    return partCount + 1;
-}
-
-char* str_replace (char* orig, char* rep, char* with) 
-{
-    char* result;  // the return string
-    char* ins;     // the next insert point
-    char* tmp;     // varies
-    int len_rep;   // length of rep (the string to remove)
-    int len_with;  // length of with (the string to replace rep with)
-    int len_front; // distance between rep and end of last rep
-    int count;     // number of replacements
-
-    // sanity checks and initialization
-    if (!orig || !rep)
-        return NULL;
-
-    len_rep = strlen(rep);
-
-    if (len_rep == 0)
-        return NULL; // empty rep causes infinite loop during count
-
-    if (!with)
-        with = "";
-
-    len_with = strlen (with);
-
-    // count the number of replacements needed
-    ins = orig;
-    for (count = 0; tmp = strstr (ins, rep); ++count)
-        ins = tmp + len_rep;
-
-    tmp = result = malloc (strlen (orig) + (len_with - len_rep) * count + 1);
-
-    if (!result)
-        return NULL;
-
-    // first time through the loop, all the variable are set correctly
-    // from here on,
-    //    tmp points to the end of the result string
-    //    ins points to the next occurrence of rep in orig
-    //    orig points to the remainder of orig after "end of rep"
-    while (count --) 
-    {
-        ins = strstr (orig, rep);
-        len_front = ins - orig;
-        tmp = strncpy (tmp, orig, len_front) + len_front;
-        tmp = strcpy  (tmp, with) + len_with;
-        orig += len_front + len_rep; // move to next "end of rep"
-    }
-    strcpy(tmp, orig);
-    return result;
-}
-
 void error (const char* msg, void* variablen, ...)
 {
     int line_number = cms_get_current_line_number ();
@@ -361,7 +145,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     // Doesn't work with ´\´ and ´\\´
     Value create_filled_in_str (char* text, Value (fr_convert_to_value) (char* text))
     {
-        text = str_replace (str_replace (str_replace (str_replace (str_replace (str_replace (text, "\\\\", "$/638$"), "\\\"", "\""), "\\r", "\r"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\");
+        text = frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (text, "\\\\", "$/638$"), "\\\"", "\""), "\\r", "\r"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\");
 
         bool   has_variables = 0;
         size_t m_index, i, j;
@@ -380,7 +164,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 
             if (text[i + 1] == '{')
             {
-                int last_bracket = cms_find_next_bracket (++ i, text);
+                int last_bracket = frs_find_next_bracket (++ i, text);
 
                 if (!has_variables)
                 {
@@ -392,7 +176,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
                 text[i] = '\0';
 
                 fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
-                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), fr_convert_to_value (_substr (text+i+1, 0, last_bracket - i - 1))));
+                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), fr_convert_to_value (frs_substr (text+i+1, 0, last_bracket - i - 1))));
 
                 text += last_bracket + 1;
                 i = -1;
@@ -407,7 +191,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 
                     if (cvar[0] == '\0' || strlen (cvar) > strlen (text + i + 1))
                         continue;
-                    tvar = _substr (text, i + 1, i + 1 + strlen (cvar));
+                    tvar = frs_substr (text, i + 1, i + 1 + strlen (cvar));
                     if (!strcmp (cvar, tvar) && strlen (varname) < strlen (cvar))
                         varname = cvar;
                     free (tvar);
@@ -451,7 +235,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         size_t length = 0; 
 
         if (func_args != NULL && func_args[0] != '\0')
-            length = split (func_args, ',', &args);
+            length = frs_split (func_args, ',', &args);
 
         Value position = fr_convert_to_value (func_name); 
 
@@ -509,9 +293,9 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             strcat (function_path, func_name);
         }
         
-        // split arguments of function
+        // frs_split arguments of function
         if (func_args[0] != '\0')
-            length = split (func_args, ',', &args);
+            length = frs_split (func_args, ',', &args);
 
         Value  m_value;
 
@@ -521,12 +305,12 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         // recieved parameters
         for (int i = length - 1; i >= 0; -- i) 
         {
-            // check if contains an ´=´
-            if (equal_pos = contains (args[i], '='))
+            // check if frs_contains an ´=´
+            if (equal_pos = frs_contains (args[i], '='))
             {
                 args[i][equal_pos - 1] = '\0';
                 m_value = fr_convert_to_value (args[i] + equal_pos); // - 1
-                ctrim (&args[i]);
+                frs_ctrim (&args[i]);
                 var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (m_value)), false);
             }
             else
@@ -577,26 +361,23 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     }
 
     // Converts a string to ´Value´ supports also different types of Values
-    // TODO: Improve system
     Value fr_convert_to_value (char* text)
     {
         // Trim text to remove spaces
-        trim (&text);
+        frs_trim (&text);
 
         // Remove brackets if outside is bracket
-        if (text[0] == '(' && strlen (text) == cms_find_next_bracket (0, text) + 1)
-        {
-            text[strlen (text) - 1] = '\0';
-            text ++;
-        }
+        if (text[0] == '(' && strlen (text) == frs_find_next_bracket (0, text) + 1)
+            text[strlen (text ++) - 1] = '\0';
 
+        // Boolean constant
         if (!strcmp (text, "true"))
-            return VALUE_INT (1);
+            return VALUE_INT (true);
         else if (!strcmp (text, "false"))
-            return VALUE_INT (0);
+            return VALUE_INT (false);
 
-        size_t is_bigger  = contains (text, '>');
-        size_t is_smaller = contains (text, '<');
+        size_t is_bigger  = frs_contains (text, '>');
+        size_t is_smaller = frs_contains (text, '<');
 
         char* v1_text;
         char* v2_text;
@@ -624,7 +405,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             return POINTER (m_index);
         }
 
-        if (!is_str_concat (text)) // ´text´ is a ´string´
+        if (!frs_is_str_concat (text)) // ´text´ is a ´string´
         {
             text[strlen (text ++) - 1] = '\0'; // Remove last ´"´
             return create_filled_in_str(text, fr_convert_to_value);
@@ -632,12 +413,12 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         else if ((text[0] == '\'' && text[strlen (text) - 1] == '\'')) // ´text´ is a ´char´
         {
             text[strlen (text ++) - 1] = '\0'; // Remove last ´'´
-            return VALUE_CHAR (str_replace (str_replace (str_replace (str_replace (str_replace (str_replace (str_replace (text, "\\\\", "$/638$"), "\\'", "'"), "\\r", "\r"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\"), "\\'", "'")[0]);
+            return VALUE_CHAR (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (text, "\\\\", "$/638$"), "\\'", "'"), "\\r", "\r"), "\\t", "\t"), "\\n", "\n"), "$/638$", "\\"), "\\'", "'")[0]);
         }
 
         // Check if text is a ´int´ or ´float´
-        bool var_is_number = 1;
-        bool var_is_float  = 1;
+        bool var_is_number = true;
+        bool var_is_float  = true;
 
         for (size_t i = 0; text[i] != '\0'; ++ i)
         {
@@ -645,9 +426,9 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
                 continue;
 
             if (text[i] < '0' || text[i] > '9')
-                var_is_number = 0;
+                var_is_number = false;
             if ((text[i] < '0' || text[i] > '9') && text[i] != '.')
-                var_is_float = 0;
+                var_is_float = false;
         }
 
         // ´text´ is ´int´
@@ -659,26 +440,26 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             return VALUE_FLOAT (atof (text));
 
         // calculation
-        if (contains (text, '+') || contains (text, '-') || contains (text, '*') || contains (text, '/') || contains (text, '%'))
+        if (frs_contains (text, '+') || frs_contains (text, '-') || frs_contains (text, '*') || frs_contains (text, '/') || frs_contains (text, '%'))
             return gna_registry_calculation_simple (&register_list, text, fr_convert_to_value);
 
 
         // Function call
         size_t func_end_name = 0;
 
-        if ((func_end_name = contains (text, '(')) && func_end_name > 1 && strlen (text) == cms_find_next_bracket (func_end_name - 1, text) + 1)
+        if ((func_end_name = frs_contains (text, '(')) && func_end_name > 1 && strlen (text) == frs_find_next_bracket (func_end_name - 1, text) + 1)
         {
             char* func_name = malloc (strlen (text) + 1);
             strcpy (func_name, text);
             func_name[func_end_name - 1] = '\0';
             func_name = realloc (func_name, func_end_name - 1);
-            trim (&func_name);
+            frs_trim (&func_name);
 
             char* func_args = malloc (strlen (text) + 1);
             strcpy (func_args, text + func_end_name);
             func_args[strlen (text) - func_end_name - 1] = '\0';
             func_args = realloc (func_args, strlen (text) - func_end_name);
-            trim (&func_args);
+            frs_trim (&func_args);
 
             // Check if function exist
             if (var_get_pos_by_name (func_name, false) != -1)
@@ -690,20 +471,20 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         size_t func_args_end;
         size_t func_code_begin, func_code_end;
 
-        if (text[0] == '(' && (func_args_end = cms_find_next_bracket (0, text)) != -1 && func_end_name < strlen (text) && 
-                (func_code_begin = contains (text, '{') - 1) != -1 && strlen (text) == (func_code_end = cms_find_next_bracket (func_code_begin, text)) + 1)
+        if (text[0] == '(' && (func_args_end = frs_find_next_bracket (0, text)) != -1 && func_end_name < strlen (text) && 
+                (func_code_begin = frs_contains (text, '{') - 1) != -1 && strlen (text) == (func_code_end = frs_find_next_bracket (func_code_begin, text)) + 1)
         {
             char* func_args = malloc (strlen (text) + 1);
             strcpy (func_args, text + 1);
             func_args[func_args_end - 1] = '\0';
             func_args = realloc (func_args, func_args_end);
-            trim (&func_args);
+            frs_trim (&func_args);
 
             char* func_code = malloc (strlen (text) + 1);
             strcpy (func_code, text + func_code_begin + 1);
             func_code[func_code_end - func_code_begin - 1] = '\0';
             func_code = realloc (func_code, func_code_end - func_code_begin);
-            trim (&func_code);
+            frs_trim (&func_code);
 
             return create_function (NULL, func_args, func_code, fr_convert_to_value);
         }
@@ -720,7 +501,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
             char* tmp_text = malloc (strlen (text));
             strcpy (tmp_text, text + 1);
         
-            trim (&tmp_text);
+            frs_trim (&tmp_text);
             
             if (text[0] == '!')
             {
@@ -741,7 +522,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     void fr_do_alloc (char* values, bool constant)
     {
         char** args;
-        size_t length = split (values, ',', &args);
+        size_t length = frs_split (values, ',', &args);
         size_t equal_pos;
 
         Value  m_value;
@@ -749,12 +530,12 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         // recieved parameters
         for (int i = 0; i < length; ++ i) 
         {
-            // check if contains an ´=´
-            if (equal_pos = contains (args[i], '='))
+            // check if frs_contains an ´=´
+            if (equal_pos = frs_contains (args[i], '='))
             {
                 args[i][equal_pos - 1] = '\0';
                 m_value = fr_convert_to_value (args[i] + equal_pos); // - 1
-                trim (&args[i]);
+                frs_trim (&args[i]);
                 var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (m_value)), constant);
                 continue;
             }
@@ -838,7 +619,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     {
         char** args;
 
-        size_t length = split (data[0], ',', &args);
+        size_t length = frs_split (data[0], ',', &args);
 
         for (size_t i = 0; i < length; ++ i)
             fr_register_add (&register_list, REGISTER_OUT (fr_convert_to_value (args[i])));
@@ -850,7 +631,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     {
         char** args;
 
-        size_t length = split (data[0], ',', &args);
+        size_t length = frs_split (data[0], ',', &args);
 
         for (size_t i = 0; i < length; ++ i)
             fr_register_add (&register_list, REGISTER_CIN (fr_convert_to_value (args[i])));
@@ -862,7 +643,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     {
         char** args;
 
-        size_t length = split (data[0], ',', &args);
+        size_t length = frs_split (data[0], ',', &args);
 
         for (size_t i = 0; i < length; ++ i)
             fr_register_add (&register_list, REGISTER_SYS (fr_convert_to_value (args[i])));
@@ -874,7 +655,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     {
         char** args;
 
-        size_t length = split (data[0], ',', &args);
+        size_t length = frs_split (data[0], ',', &args);
 
         for (size_t i = 0; i < length; ++ i)
             fr_register_add (&register_list, REGISTER_PUSH (fr_convert_to_value (args[i])));
@@ -886,7 +667,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
     {
         char** args;
 
-        size_t length = split (data[0], ',', &args);
+        size_t length = frs_split (data[0], ',', &args);
 
         for (size_t i = 0; i < length; ++ i)
             fr_register_add (&register_list, REGISTER_POP (fr_convert_to_value (args[i])));

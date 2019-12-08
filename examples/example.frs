@@ -1,16 +1,15 @@
 < START - FOUND BUGS >
     < error message wrong line >
     < improve float system >
-    < comment system does not work well >
     < wrong position for arguments when calling functions with '=' >
 < END - FOUND BUGS >
 
 < START - Koala's Standart Library >
     < STD - DataTypes >
-    var STR   = "";
-    var CHAR  = 'A' - 65;
-    var INT   = 0;
-    var FLOAT = 0.0;
+    val STR   = "";
+    val CHAR  = 'A' - 65;
+    val INT   = 0;
+    val FLOAT = 0.0;
 
     < STD - Read Methode >
     read (type = INT) {
@@ -95,14 +94,12 @@
     print (~(&a + 2));
 >
 
-var x = 5;
-val y = 10;
 
-x += 5;
-O: x, '\n';
+test (x = 4 + 2, y = 3 + 2) {
+    O: "$x:$y\n";
+}
 
-y += 5;
-O: y, '\n';
+test (5, 3);
 
 
 < ASCII - Table >

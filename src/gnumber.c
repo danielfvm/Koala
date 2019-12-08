@@ -6,61 +6,8 @@
 #include <string.h>
 #include <unistd.h>
 
-char* _substr (const char *src, int m, int n)
-{
-    unsigned int len = n - m; // length of string
-    unsigned int i;
-
-    // allocate (len + 1) chars for destination (+1 for extra null character)
-    char *dest = malloc (len + 1);
-
-    // extracts characters between m'th and n'th index from source string
-    // and copy them into the destination string
-    for (i = m; i < n && (*src != '\0'); ++ i)
-    {
-        *dest = *(src + i);
-        dest ++;
-    }
-
-    *dest = '\0';
-
-    return dest - len; // destination string
-}
 
 /*
-void _trim (char** text)
-{
-    // Trim begin
-    while (**text <= ' ')
-        (*text) ++;
-
-    // Trim end
-    for (unsigned int len = strlen (*text) - 1; (*text)[len] <= ' '; -- len)
-        (*text)[len] = '\0';
-}
-
-int _find_close_bracket (const char* str, const char open, const char close, int p)
-{
-    for (int brackets = 0; str[p] != '\0'; ++ p)
-    {
-        if (str[p] == open)
-            brackets ++;
-        else if (str[p] == close && (-- brackets) <= 0)
-            return p;
-    }
-
-    return -1;
-}
-
-int _find_brackets (const char* str)
-{
-    for (unsigned int i = 0; str[i] != '\0'; ++ i)
-        if (str[i] == '(')
-            return 1;
-    return 0;
-}
-
-
 bool* _gba_conv_calculation (const char* calc, unsigned int* size)
 {
     unsigned int calc_len = strlen (calc);
@@ -83,7 +30,7 @@ bool* _gba_conv_calculation (const char* calc, unsigned int* size)
             continue;
 
         // Insert value to bool array
-        array[array_i ++] = atof (_substr (calc, last_i, i));
+        array[array_i ++] = atof (frs_substr (calc, last_i, i));
 
         // Insert compute to bool array
         array[array_i ++] = calc[i];
@@ -95,7 +42,7 @@ bool* _gba_conv_calculation (const char* calc, unsigned int* size)
     }
 
     // Insert value
-    array[array_i ++] = atof (_substr (calc, last_i, i));
+    array[array_i ++] = atof (frs_substr (calc, last_i, i));
 
     return array;
 }
@@ -155,7 +102,7 @@ bool gba_calculation (const char* calc)
                 if (close_bracket == -1)
                     return 0;
 
-                char* calc_bracket = _substr (calc, i + 1, close_bracket);
+                char* calc_bracket = frs_substr (calc, i + 1, close_bracket);
                 bool  result       = gba_calculation (calc_bracket);
                 char  str_result[16];
 
@@ -177,7 +124,7 @@ bool gba_calculation (const char* calc)
         }
 
         // Returning answer of new calculation string with inserted values from brackets
-        return gba_calculation (_substr (new_calc, 0, w));
+        return gba_calculation (frs_substr (new_calc, 0, w));
     }
 
     return gba_calculation_simple (calc); // Simple calculation if there are no brackets
@@ -250,7 +197,7 @@ float* _gna_conv_calculation (const char* calc, unsigned int* size)
         if ((calc[i] != '+' && calc[i] != '-' && calc[i] != '*' && calc[i] != '/') || i == 0)
             continue;
 
-        char* value = _substr (calc, last_i, i);
+        char* value = frs_substr (calc, last_i, i);
         gna_consider_sign (value);
 
         // Insert value to float array
@@ -266,7 +213,7 @@ float* _gna_conv_calculation (const char* calc, unsigned int* size)
     }
 
     // Insert value
-    array[array_i ++] = atof (_substr (calc, last_i, i));
+    array[array_i ++] = atof (frs_substr (calc, last_i, i));
 
     return array;
 }
@@ -334,7 +281,7 @@ float gna_calculation (const char* calc)
             if (calc[i] == '(')
             {
                 int   close_bracket = _find_close_bracket (calc, '(', ')', i);
-                char* calc_bracket  = _substr (calc, i + 1, close_bracket);
+                char* calc_bracket  = frs_substr (calc, i + 1, close_bracket);
                 float result = gna_calculation (calc_bracket);
                 char  str_result[16];
 
@@ -355,7 +302,7 @@ float gna_calculation (const char* calc)
                 new_calc[w ++] = calc[i]; // if in no bracket, simply override chars of new_calc with calc
         }
 
-        char* fin_calc = _substr (new_calc, 0, w);    // Remove strange noise at end of string
+        char* fin_calc = frs_substr (new_calc, 0, w);    // Remove strange noise at end of string
         gna_consider_sign (fin_calc);                 // Calculating signs
 
         return gna_calculation (fin_calc);            // Returning answer of new calculation string with inserted values from brackets
@@ -476,7 +423,7 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
         if (in_string || in_char || in_brackets)
             continue;
 
-        value = _substr (calc, last_i, i);
+        value = frs_substr (calc, last_i, i);
         gna_consider_sign (value);
 
         // Insert value to float array
@@ -493,7 +440,7 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
     }
 
     // Insert value
-    (*array)[array_i ++] = fr_convert_to_value (_substr (calc, last_i, i));
+    (*array)[array_i ++] = fr_convert_to_value (frs_substr (calc, last_i, i));
 }
 
 Value gna_registry_calculation_simple (Registry** register_list, const char* calc, Value (*fr_convert_to_value) (char*))

@@ -3,6 +3,7 @@
 
 
 #include "multisearcher.h"
+#include "util.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -11,7 +12,6 @@
 
 #define CMS_CHECK(x, y) ((x & y) == y)
 
-typedef char bool;
 
 // Temporary variable to set ´CmsSearch´ from ´cms_add´
 CmsTemplate* cms_tmp_template;
@@ -50,79 +50,16 @@ void cms_add (char* syntax, CmsCallback callback, int options)
     }
 }
 
-int cms_find_next_bracket (size_t p, const char* text)
-{
-    if (p >= strlen (text))
-    {
-        fprintf (stderr, "[CMS][ERR] → first char out of text size\n");
-        return -1;
-    }
-
-    size_t inside_brackets  = 0;
-    size_t text_size        = strlen (text);
-    char   bracket_open     = text[p];
-    char   bracket_close;
-
-    // Add additional brackets here
-    switch (bracket_open)
-    {
-        case '(': bracket_close = ')'; break;
-        case '[': bracket_close = ']'; break;
-        case '{': bracket_close = '}'; break;
-        default:
-            fprintf (stderr, "[CMS][ERR] → Wrong first char used in ´cms_find_next_bracket´. First char musst be '(', '[' or '{'!\n");
-            return -1;
-    }
-
-    int in_string = 0;
-    int in_char   = 0;
-
-    // Searching after closing bracket
-    for (; p < text_size; ++ p)
-    {
-        // Control if this is working!
-        if (text[p] == '\\' && (p >= 1 && text[p-1] != '\\') && ++ p)
-            continue;
-
-        if (text[p] == '\"' && (p <= 0 || text[p-1] != '\\') && !in_char)
-            in_string = !in_string;
-        if (text[p] == '\'' && (p <= 0 || text[p-1] != '\\') && !in_string)
-            in_char = !in_char;
-
-        if (in_string || in_char)
-            continue;
-
-        if (text[p] == bracket_open)
-            inside_brackets ++;
-        if (text[p] == bracket_close)
-            inside_brackets --;
-        if (inside_brackets <= 0)
-            return p;
-    }
-
-    // Closing bracket not found!
-    return -1;
-}
-
-bool has_illigal_ascii (const char* text)
-{
-    for (size_t i = 0; text[i] != '\0'; ++ i)
-        if (!((text[i] >= 'a' && text[i] <= 'z') || 
-              (text[i] >= 'A' && text[i] <= 'Z') || 
-              (text[i] >= '0' && text[i] <= '9') ||
-               text[i] == '_' || text[i] == '.'))
-                return 1;
-    return 0;
-}
-
 
 char* cms_line = NULL;
+
 char* cms_get_current_line ()
 {
     return cms_line;
 }
 
 int cms_line_number = 0;
+
 int cms_get_current_line_number ()
 {
     return cms_line_number;
@@ -245,7 +182,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                         while (text[new_text_char_i] != template_syntax[i])
                             if ((text[new_text_char_i] == '('  || text[new_text_char_i] == '['  || text[new_text_char_i] == '{') 
                                     && CMS_CHECK (template_options, CMS_USE_BRACKET_SEARCH_ALGORITHM))
-                                new_text_char_i = cms_find_next_bracket (new_text_char_i, text);
+                                new_text_char_i = frs_find_next_bracket (new_text_char_i, text);
                             else
                                 new_text_char_i ++;
 
@@ -261,7 +198,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                     data_str[i] = '\0'; // end character
 
                     // Check if '#' has legall ascii charactors 
-                    if (template_char == '#' && (data_str[0] == '\0' || has_illigal_ascii (data_str)))
+                    if (template_char == '#' && (data_str[0] == '\0' || frs_has_illigal_ascii (data_str)))
                         break; 
 
                     // Update ´text_char_i´ to keep on comparing the ´text´ with the given syntax
