@@ -15,6 +15,43 @@ bool frs_has_illigal_ascii (const char* text)
     return 0;
 }
 
+int frs_find_string_end (size_t p, const char* text)
+{
+    char string_end;
+    int  string_len;
+
+    if (p >= (string_len = strlen (text)))
+    {
+        fprintf (stderr, "[CMS][ERR] → first char out of text size\n");
+        return -1;
+    }
+
+    string_end = text[p];
+
+    // Add additional brackets here
+    if (string_end != '"' && string_end != '\'')
+    {
+        fprintf (stderr, "[CMS][ERR] → Wrong first char used in ´cms_find_string_end´. First char musst be ´'´, ´\"´");
+        return -1;
+    }
+
+    p ++;
+
+    // Searching after closing bracket
+    for (; p < string_end; ++ p)
+    {
+        // Control if this is working!
+        if (text[p] == '\\' && (p >= 1 && text[p-1] != '\\') && ++ p)
+            continue;
+
+        if (text[p] == string_end && (p <= 0 || text[p-1] != '\\'))
+            return p + 1;
+    }
+
+    // Closing bracket not found!
+    return -1;
+}
+
 int frs_find_next_bracket (size_t p, const char* text)
 {
     if (p >= strlen (text))

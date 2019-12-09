@@ -179,12 +179,18 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                             new_text_char_i ++;
                        */
                         // might be wrong!
+  //                      puts("start");
                         while (text[new_text_char_i] != template_syntax[i])
-                            if ((text[new_text_char_i] == '('  || text[new_text_char_i] == '['  || text[new_text_char_i] == '{') 
+                        {
+    //                        if (text[new_text_char_i] == '\'' || text[new_text_char_i] == '"') 
+      //                          new_text_char_i = frs_find_string_end (new_text_char_i, text);
+        /*                    else*/ if ((text[new_text_char_i] == '('  || text[new_text_char_i] == '['  || text[new_text_char_i] == '{') 
                                     && CMS_CHECK (template_options, CMS_USE_BRACKET_SEARCH_ALGORITHM))
                                 new_text_char_i = frs_find_next_bracket (new_text_char_i, text);
                             else
                                 new_text_char_i ++;
+                        }
+//                        puts("end");
 
                     }
 

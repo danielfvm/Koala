@@ -9,6 +9,8 @@ bool   frs_has_illigal_ascii (const char* text);
 
 int    frs_find_next_bracket (size_t p, const char* text);
 
+int    frs_find_string_end (size_t p, const char* text);
+
 char*  frs_substr (const char *src, int m, int n);
 
 void   frs_trim (char** text);
