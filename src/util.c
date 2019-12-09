@@ -19,11 +19,12 @@ int frs_find_string_end (size_t p, const char* text)
 {
     char string_end;
     int  string_len;
+    int  old_p = p + 1;
 
     if (p >= (string_len = strlen (text)))
     {
         fprintf (stderr, "[CMS][ERR] → first char out of text size\n");
-        return -1;
+        return old_p;
     }
 
     string_end = text[p];
@@ -32,13 +33,13 @@ int frs_find_string_end (size_t p, const char* text)
     if (string_end != '"' && string_end != '\'')
     {
         fprintf (stderr, "[CMS][ERR] → Wrong first char used in ´cms_find_string_end´. First char musst be ´'´, ´\"´");
-        return -1;
+        return old_p;
     }
 
     p ++;
 
     // Searching after closing bracket
-    for (; p < string_end; ++ p)
+    for (; p < string_len; ++ p)
     {
         // Control if this is working!
         if (text[p] == '\\' && (p >= 1 && text[p-1] != '\\') && ++ p)
@@ -49,7 +50,7 @@ int frs_find_string_end (size_t p, const char* text)
     }
 
     // Closing bracket not found!
-    return -1;
+    return old_p;
 }
 
 int frs_find_next_bracket (size_t p, const char* text)

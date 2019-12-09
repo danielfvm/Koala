@@ -685,6 +685,13 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
     }
 
+    void c_check_short (CmsData* data, int size)
+    {
+        sprintf (data[1] = realloc (data[1], strlen (data[1]) + 2), "%s;", data[1]);
+        c_check (data, size);
+    }
+
+
     void c_ncheck (CmsData* data, int size)
     {
         Value  m_value = fr_convert_to_value (data[0]);
@@ -693,6 +700,12 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         size_t x = fr_register_add (&register_list, REGISTER_EQ (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
         fr_compile (data[1], variables, variable_count);
         register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
+    }
+
+    void c_ncheck_short (CmsData* data, int size)
+    {
+        sprintf (data[1] = realloc (data[1], strlen (data[1]) + 2), "%s;", data[1]);
+        c_ncheck (data, size);
     }
 
     void c_loop (CmsData* data, int size)
@@ -706,6 +719,12 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         fr_compile (data[1], variables, variable_count);
         fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (loop_index)));
         register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
+    }
+
+    void c_loop_short (CmsData* data, int size)
+    {
+        sprintf (data[1] = realloc (data[1], strlen (data[1]) + 2), "%s;", data[1]);
+        c_loop (data, size);
     }
 
     void c_check_else (CmsData* data, int size)
@@ -793,12 +812,15 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         cms_add ("! ( % ) { % }",       c_ncheck,       CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! # { % } { % }",     c_ncheck_else,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! # { % }",           c_ncheck,       CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("! # > % ;",           c_ncheck_short, CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) { % } { % }",   c_check_else,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) { % }",         c_check,        CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# { % } { % }",       c_check_else,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# { % }",             c_check,        CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# > % ;",             c_check_short,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) -> { % }",      c_loop,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# -> { % }",          c_loop,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# -> % ;",            c_loop_short,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("ret % ;",             c_return,       CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
     } ));
 

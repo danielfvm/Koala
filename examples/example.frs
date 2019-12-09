@@ -2,22 +2,38 @@ clear () > S: "clear";
 
 sleep (time) > S: "sleep $time";
 
-
 drawKoala () {
-    O: " ,~~.,''"'`'.~~. \n";
-    O: ": {` .- _ -. '} ;\n";
-    O: " `:   6(_)9   ;' \n";
-    O: "  ';  ._|_,  ;`  \n";
-    O: "   '`-.\_/,.'`   \n";
+    O: " ,~~.,''\"'`'.~~. \n";
+    O: ": {` .- _ -. '} ; \n";
+    O: " `:   9(_)9   ;'  \n";
+    O: "  ';  ._|_,  ;`   \n";
+    O: "   '`-.\\_/,.'`   \n";
+}
+
+drawKoalaEyeClosed () {
+    O: " ,~~.,''\"'`'.~~. \n";
+    O: ": {` .- _ -. '} ; \n";
+    O: " `:   .(_).   ;'  \n";
+    O: "  ';  ._|_,  ;`   \n";
+    O: "   '`-.\\_/,.'`   \n";
+}
+
+var zwinkerCounter = 0;
+
+drawZwinkerCounter (incr = false) {
+    incr > zwinkerCounter += 1;
+    O: "\nZwinkers: $zwinkerCounter\n";
 }
 
 render () {
     clear ();
     drawKoala ();
-    sleep (0.1);
+    drawZwinkerCounter ();
+    sleep (3);
+    clear ();
+    drawKoalaEyeClosed ();
+    drawZwinkerCounter (true);
+    sleep (0.2);
 }
 
-
-true -> {
-    render ();
-}
+true -> render ();
