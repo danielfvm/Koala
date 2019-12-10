@@ -9,7 +9,7 @@ build:
 	gcc obj/main.o obj/gnumber.o obj/multisearcher.o obj/compiler.o obj/interpreter.o obj/util.o -o bin/koala -lm
 
 run:
-	./bin/koala
+	./bin/koala examples/example.frs
 
 clean:
 	rm -rf obj

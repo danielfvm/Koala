@@ -53,6 +53,9 @@ char* function_path = NULL;
 // Here the code will be compiled into a list of registers -> ´register_list´
 int fr_compile (const char* code, Variable** variables, const size_t pre_variable_count)
 {
+    if (!code || !variables)
+        return EXIT_SUCCESS;
+
     if (!function_path)
         strcpy (function_path = malloc (strlen ("local") + 1), "local");
 

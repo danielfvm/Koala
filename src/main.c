@@ -23,22 +23,10 @@ char* read_file (const char* filepath)
     buffer = NULL;
 
     if (getdelim (&buffer, &len, '\0', file) == -1)
-    {
-        fprintf (stderr, "Failed to read file ´%s´\n", filepath);
-        exit (EXIT_FAILURE);
-    }
+        return NULL;
 
     return buffer;
 }
-
-/*
-void* cast_to_void_ptr (float value)
-{
-    float* ptr = malloc (sizeof (float));
-    (*ptr) = value;
-    return ptr;
-}
-*/
 
 int main (int argc, char** argv)
 {
@@ -52,7 +40,13 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    fr_compile (read_file ("examples/example.frs"), &variables, 0);
+    if (argc < 2)
+    {
+        fprintf (stderr, "Missing File argument!\n");
+        return EXIT_FAILURE;
+    }
+
+    fr_compile (read_file (argv[1]), &variables, 0);
 
     fr_compiler_run ();
 
