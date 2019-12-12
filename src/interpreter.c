@@ -501,8 +501,8 @@ int fr_run (const Registry* register_list)
             {
                 void** value = &register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].value;
                 intptr_t m_value_mod = (intptr_t) fr_get_memory (reg->reg_values[1]);
-                byte     data_type_add = fr_get_data_type (reg->reg_values[1]);
-                byte     data_type     = register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type;
+                byte data_type_add = fr_get_data_type (reg->reg_values[1]);
+                byte data_type     = register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type;
 
                 (*value) = (void*)((intptr_t)(*value) % (data_type_add == DT_FLOAT ? (intptr_t)(m_value_mod / FLOAT_CONV_VALUE) : m_value_mod));
                 continue;
@@ -511,8 +511,8 @@ int fr_run (const Registry* register_list)
             {
                 intptr_t m_value       = (intptr_t) fr_get_memory (reg->reg_values[0]);
                 intptr_t m_value_div   = (intptr_t) fr_get_memory (reg->reg_values[1]);
-                byte     data_type_add = fr_get_data_type (reg->reg_values[1]);
-                byte     data_type     = register_list[m_value]->reg_values[0].data_type;
+                byte data_type_add = fr_get_data_type (reg->reg_values[1]);
+                byte data_type     = register_list[m_value]->reg_values[0].data_type;
 
                 if (data_type == DT_FLOAT && data_type_add != DT_FLOAT) 
                     fr_set_memory (reg->reg_values[0], (void*)(intptr_t)((((intptr_t) register_list[m_value]->reg_values[0].value / FLOAT_CONV_VALUE) / m_value_div) * FLOAT_CONV_VALUE));

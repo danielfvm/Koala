@@ -387,7 +387,7 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
         if (!in_char && !in_string && calc[i] == ')')
             in_brackets --;
 
-        if (!in_string && !in_char && !in_brackets && (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/'))
+        if (!in_string && !in_char && !in_brackets && (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/' || calc[i] == '%'))
             *size += 2;
     }
 
@@ -459,7 +459,7 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
     {
         char compute = (intptr_t)array[i].value;
 
-        if (compute != '*' && compute != '/')
+        if (compute != '*' && compute != '/' && compute != '%')
         {
             has_found_term = 0;
             continue;

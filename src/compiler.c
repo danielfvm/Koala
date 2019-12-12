@@ -813,6 +813,7 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
         cms_add ("#:",          c_clabel,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! ( % ) { % } { % }", c_ncheck_else,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! ( % ) { % }",       c_ncheck,       CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("! ( % ) > % ;",       c_ncheck_short, CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! # { % } { % }",     c_ncheck_else,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! # { % }",           c_ncheck,       CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! # > % ;",           c_ncheck_short, CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);

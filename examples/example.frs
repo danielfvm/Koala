@@ -1,1 +1,20 @@
-O: "Hello World!\n";
+< ret in if doesn't work! >
+< calling func in if doesn't work! >
+
+isPrime (x) {
+    var j = 2;
+    var prime = true;
+    (j < x) -> {
+        !(x % j) > prime = false;
+        j += 1;
+    }
+    ret prime;
+}
+
+var i = 0;
+
+(i < 100) -> {
+    var t = isPrime (i);
+    t > O: i, '\n';
+    i += 1;
+}
