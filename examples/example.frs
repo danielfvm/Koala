@@ -1,5 +1,6 @@
-< ret in if doesn't work! >
-< calling func in if doesn't work! >
+< re1t in if doesn't work! >
+< default value does not work! >
+< comments not working properly >
 
 isPrime (x) {
     var j = 2;
@@ -14,7 +15,6 @@ isPrime (x) {
 var i = 0;
 
 (i < 100) -> {
-    var t = isPrime (i);
-    t > O: i, '\n';
+    (isPrime (i)) > O: i, '\n';
     i += 1;
 }
