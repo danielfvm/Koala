@@ -51,10 +51,12 @@ size_t in_function = 0;
 char* function_path = NULL;
 
 // Here the code will be compiled into a list of registers -> ´register_list´
-int fr_compile (const char* code, Variable** variables, const size_t pre_variable_count)
+int fr_compile (char* code, Variable** variables, const size_t pre_variable_count)
 {
     if (!code || !variables)
         return EXIT_SUCCESS;
+
+    frs_filter_comment (&code);
 
     if (!function_path)
         strcpy (function_path = malloc (strlen ("local") + 1), "local");
@@ -788,7 +790,6 @@ int fr_compile (const char* code, Variable** variables, const size_t pre_variabl
 
     // Check if c_check_else & c_check can be replaced with c_bracket...
     cms_create ( &cms_template, CMS_LIST ( {
-        cms_add ("< % >",                  NULL,                CMS_IGNORE_SPACING);
         cms_add ("# ( % ) { % }",          c_function,          CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) > % ;",          c_function_short,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) ;",   c_call,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);

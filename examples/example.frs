@@ -1,20 +1,27 @@
-< re1t in if doesn't work! >
-< default value does not work! >
-< comments not working properly >
+<* default value does not work! *>
+<* ret doesn't work in lambda *>
+
+
+for (min, max, lambda = (x) { O: x, '\n'; }) {
+    (min < max + 1) -> {
+        lambda (min);
+        min += 1;
+    }
+}
 
 isPrime (x) {
+    (x < 2) > ret false;
+
     var j = 2;
-    var prime = true;
     (j < x) -> {
-        !(x % j) > prime = false;
+        !(x % j) > ret false;
         j += 1;
     }
-    ret prime;
+
+    ret true;
 }
 
-var i = 0;
-
-(i < 100) -> {
+for (0, 100, (i) {
     (isPrime (i)) > O: i, '\n';
-    i += 1;
-}
+});
+

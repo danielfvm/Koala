@@ -202,6 +202,41 @@ size_t frs_contains (char* text, char c)
     return 0;
 }
 
+void frs_filter_comment (char** text)
+{
+    size_t i, j;
+    bool in_string = false;
+    bool in_char   = false;
+    int  in_comm   = -1;
+
+    for (i = 0; (*text)[i] != '\0'; ++ i)
+    {
+        if ((*text)[i] == '\\' && i >= 1 && (*text)[i-1] == '\\' && ++ i)
+            continue;
+
+        if ((*text)[i] == '"' && (i == 0 || (*text)[i-1] != '\\') && !in_char && in_comm == -1)
+            in_string = !in_string;
+
+        if ((*text)[i] == '\'' && (i == 0 || (*text)[i-1] != '\\') && !in_string && in_comm == -1)
+            in_char = !in_char;
+
+        if (in_string || in_char)
+            continue;
+
+        if ((*text)[i] == '<' && (*text)[i + 1] == '*')
+            in_comm = i;
+        if (in_comm != -1 && i >= 2 && (*text)[i - 1] == '*' && (*text)[i] == '>')
+        {
+            i ++;
+            for (j = i; (*text)[j] != '\0'; ++ j)
+                (*text)[j - (i - in_comm)] = (*text)[j];
+            (*text)[j - (i - in_comm)] = '\0';
+            i = in_comm;
+            in_comm = -1;
+        }
+    }
+}
+
 bool frs_is_str_concat (char* str)
 {
     char* text = malloc (strlen (str) + 1);

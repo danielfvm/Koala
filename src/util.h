@@ -21,6 +21,8 @@ bool   frs_is_bracket (char c);
 
 size_t frs_contains (char* text, char c);
 
+void   frs_filter_comment (char** text);
+
 bool   frs_is_str_concat (char* str);
 
 int    frs_split (char* buffer, char delim, char*** output);
