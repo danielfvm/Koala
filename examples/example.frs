@@ -1,7 +1,8 @@
 <* default value does not work! *>
 <* ret doesn't work in lambda *>
+<* make index in interpreter *>
 
-
+<*
 for (min, max, lambda = (x) { O: x, '\n'; }) {
     (min < max + 1) -> {
         lambda (min);
@@ -24,4 +25,8 @@ isPrime (x) {
 for (0, 100, (i) {
     (isPrime (i)) > O: i, '\n';
 });
+*>
 
+val x = "Hallo Welt!";
+
+O: x[1], '\n';

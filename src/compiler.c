@@ -520,6 +520,21 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
                 return VALUE_INT (var_position);
         }
 
+        size_t bracket_index_open;
+        size_t bracket_index_close;
+
+        if ((bracket_index_open = frs_contains (text, '[')) != -1 && (bracket_index_close = frs_find_next_bracket (bracket_index_open - 1, text)) != -1)
+        {
+            char old_char = text[bracket_index_open - 1] = '\0';
+            var_position = var_get_pos_by_name (text, false);
+            text[bracket_index_open - 1] = old_char;
+
+            text[bracket_index_close] = '\0';
+            text += bracket_index_open;
+
+            return INDEX (var_position, atoi (text));
+        }
+
         // Error variable does not exist!
         error ("Variable ´%s´ does not exist in this scope!\n", text);
     }

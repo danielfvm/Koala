@@ -280,7 +280,9 @@ int fr_run (const Registry* register_list)
             return value;
         if (value.index == VALUE_TYPE_POINTER_POINTER)
             return register_list[(intptr_t)fr_get_memory_value ((register_list, register_list[(intptr_t) value.value]->reg_values[0])).value]->reg_values[0];
-        return register_list[(intptr_t) value.value]->reg_values[0];
+        if (value.index == VALUE_TYPE_POINTER)
+            return register_list[(intptr_t) value.value]->reg_values[0];
+        return VALUE_CHAR (((char*)register_list[(intptr_t) value.value]->reg_values[0].value)[value.index]);
     }
 
     void* fr_get_memory (Value value)
@@ -304,7 +306,9 @@ int fr_run (const Registry* register_list)
             return value.data_type;
         if (value.index == VALUE_TYPE_POINTER_POINTER)
             return register_list[(intptr_t)fr_get_memory (register_list[(intptr_t) value.value]->reg_values[0])]->reg_values[0].data_type;
-        return ((Value)register_list[(intptr_t) value.value]->reg_values[0]).data_type;
+        if (value.index == VALUE_TYPE_POINTER)
+            return ((Value)register_list[(intptr_t) value.value]->reg_values[0]).data_type;
+        return DT_CHAR;
     }
 
     if (!register_list)
