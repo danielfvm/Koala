@@ -29,7 +29,10 @@ enum Execution
     SYS,
     NEG,
     PUSH,
-    POP
+    POP,
+    IND,
+    CMP,
+    NCMP
 };
 
 enum DataType
@@ -48,7 +51,6 @@ enum ValueType
     VALUE_TYPE_VALUE   = -3,
     VALUE_TYPE_POINTER = -2,
     VALUE_TYPE_POINTER_POINTER = -1,
- // VALUE_TYPE_INDEX   >= 0
 };
 
 
@@ -83,8 +85,6 @@ Value POINTER (int m_pointer);
 
 Value POINTER_POINTER (int m_pointer);
 
-Value INDEX (int m_pointer, int index);
-
 Value VALUE (byte data_type, void* value);
 
 Value VALUE_STR (void* value);
@@ -114,19 +114,25 @@ Register* REGISTER_DIV (Value m_index, Value m_div);
 
 Register* REGISTER_SET (Value m_index, Value m_value);
 
+Register* REGISTER_IND (Value m_index, Value m_value, Value m_value_index);
+
 Register* REGISTER_EQ (Value m_value1, Value m_value2, Value not_position);
 
 Register* REGISTER_NEQ (Value m_value1, Value m_value2, Value not_position);
 
+Register* REGISTER_CMP (Value m_value1, Value m_value2, Value not_position);
+
+Register* REGISTER_NCMP (Value m_value1, Value m_value2, Value not_position);
+
 Register* REGISTER_SYS (Value cmd);
 
-Register* REGISTER_BIG (Value m_value1, Value m_value2, Value not_position);
+Register* REGISTER_BIG (Value m_value1, Value m_value2, Value m_index);
 
-Register* REGISTER_SMA (Value m_value1, Value m_value2, Value not_position);
+Register* REGISTER_SMA (Value m_value1, Value m_value2, Value m_index);
 
-Register* REGISTER_BEQ (Value m_value1, Value m_value2, Value not_position);
+Register* REGISTER_BEQ (Value m_value1, Value m_value2, Value m_index);
 
-Register* REGISTER_SEQ (Value m_value1, Value m_value2, Value not_position);
+Register* REGISTER_SEQ (Value m_value1, Value m_value2, Value m_index);
 
 Register* REGISTER_JUMP (Value position);
 

@@ -85,11 +85,6 @@ Value POINTER_POINTER (int m_pointer)
     return (Value) { DT_POINTER_POINTER, VALUE_TYPE_POINTER_POINTER, (void*)(intptr_t) m_pointer };
 }
 
-Value INDEX (int m_pointer, int index)
-{
-    return (Value) { DT_POINTER, index, (void*)(intptr_t) m_pointer };
-}
-
 Value VALUE (byte data_type, void* value)
 {
     return (Value) { data_type, VALUE_TYPE_VALUE, value };
@@ -199,6 +194,11 @@ Register* REGISTER_SET (Value m_index, Value m_value)
     return CREATE_REGISTER_2 (SET, m_index, m_value);
 }
 
+Register* REGISTER_IND (Value m_index, Value m_value, Value m_value_index)
+{
+    return CREATE_REGISTER_3 (IND, m_index, m_value, m_value_index);
+}
+
 Register* REGISTER_EQ (Value m_value1, Value m_value2, Value not_position)
 {
     return CREATE_REGISTER_3 (EQ, m_value1, m_value2, not_position);
@@ -209,29 +209,39 @@ Register* REGISTER_NEQ (Value m_value1, Value m_value2, Value not_position)
     return CREATE_REGISTER_3 (NEQ, m_value1, m_value2, not_position);
 }
 
+Register* REGISTER_CMP (Value m_value1, Value m_value2, Value not_position)
+{
+    return CREATE_REGISTER_3 (CMP, m_value1, m_value2, not_position);
+}
+
+Register* REGISTER_NCMP (Value m_value1, Value m_value2, Value not_position)
+{
+    return CREATE_REGISTER_3 (NCMP, m_value1, m_value2, not_position);
+}
+
 Register* REGISTER_SYS (Value cmd)
 {
     return CREATE_REGISTER_1 (SYS, cmd);
 }
 
-Register* REGISTER_BIG (Value m_value1, Value m_value2, Value not_position)
+Register* REGISTER_BIG (Value m_value1, Value m_value2, Value m_index)
 {
-    return CREATE_REGISTER_3 (BIG, m_value1, m_value2, not_position);
+    return CREATE_REGISTER_3 (BIG, m_value1, m_value2, m_index);
 }
 
-Register* REGISTER_SMA (Value m_value1, Value m_value2, Value not_position)
+Register* REGISTER_SMA (Value m_value1, Value m_value2, Value m_index)
 {
-    return CREATE_REGISTER_3 (SMA, m_value1, m_value2, not_position);
+    return CREATE_REGISTER_3 (SMA, m_value1, m_value2, m_index);
 }
 
-Register* REGISTER_BEQ (Value m_value1, Value m_value2, Value not_position)
+Register* REGISTER_BEQ (Value m_value1, Value m_value2, Value m_index)
 {
-    return CREATE_REGISTER_3 (BEQ, m_value1, m_value2, not_position);
+    return CREATE_REGISTER_3 (BEQ, m_value1, m_value2, m_index);
 }
 
-Register* REGISTER_SEQ (Value m_value1, Value m_value2, Value not_position)
+Register* REGISTER_SEQ (Value m_value1, Value m_value2, Value m_index)
 {
-    return CREATE_REGISTER_3 (SEQ, m_value1, m_value2, not_position);
+    return CREATE_REGISTER_3 (SEQ, m_value1, m_value2, m_index);
 }
 
 Register* REGISTER_JUMP (Value position)
@@ -280,9 +290,7 @@ int fr_run (const Registry* register_list)
             return value;
         if (value.index == VALUE_TYPE_POINTER_POINTER)
             return register_list[(intptr_t)fr_get_memory_value ((register_list, register_list[(intptr_t) value.value]->reg_values[0])).value]->reg_values[0];
-        if (value.index == VALUE_TYPE_POINTER)
-            return register_list[(intptr_t) value.value]->reg_values[0];
-        return VALUE_CHAR (((char*)register_list[(intptr_t) value.value]->reg_values[0].value)[value.index]);
+        return register_list[(intptr_t) value.value]->reg_values[0];
     }
 
     void* fr_get_memory (Value value)
@@ -306,9 +314,7 @@ int fr_run (const Registry* register_list)
             return value.data_type;
         if (value.index == VALUE_TYPE_POINTER_POINTER)
             return register_list[(intptr_t)fr_get_memory (register_list[(intptr_t) value.value]->reg_values[0])]->reg_values[0].data_type;
-        if (value.index == VALUE_TYPE_POINTER)
-            return ((Value)register_list[(intptr_t) value.value]->reg_values[0]).data_type;
-        return DT_CHAR;
+        return ((Value)register_list[(intptr_t) value.value]->reg_values[0]).data_type;
     }
 
     if (!register_list)
@@ -360,6 +366,12 @@ int fr_run (const Registry* register_list)
                 }
                 else
                     reg->reg_values[0] = fr_get_memory_value (reg->reg_values[1]);
+                continue;
+            }
+            case IND:
+            {
+                fr_set_memory    (reg->reg_values[0], (void*)(intptr_t)((char*)fr_get_memory (reg->reg_values[1]))[(intptr_t) fr_get_memory (reg->reg_values[2])]);
+                fr_set_data_type (reg->reg_values[0], DT_CHAR);
                 continue;
             }
             case SET:
@@ -528,13 +540,13 @@ int fr_run (const Registry* register_list)
                     fr_set_memory (reg->reg_values[0], (void*) ((intptr_t) register_list[m_value]->reg_values[0].value / m_value_div));
                 continue;
             }
-            case EQ:
+            case CMP:
             {
                 if (fr_get_memory (reg->reg_values[0]) != fr_get_memory (reg->reg_values[1]))
                     i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
                 continue;
             }
-            case NEQ:
+            case NCMP:
             {
                 if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) == (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
                     i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
@@ -560,6 +572,16 @@ int fr_run (const Registry* register_list)
                 fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) < (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
                 continue;
             }
+            case EQ:
+            {
+                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) == (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
+                continue;
+            }
+            case NEQ:
+            {
+                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) != (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
+                continue;
+            }
             case OUT:
             {
                 byte m_type = fr_get_data_type (reg->reg_values[0]); 
@@ -583,11 +605,10 @@ int fr_run (const Registry* register_list)
                     size_t buffer_size = 100000;
                     char*  buffer = malloc (buffer_size);
 
-                    getline (&buffer, &buffer_size, stdin);
+                    fgets (buffer, buffer_size, stdin);
 
-                    buffer[strlen (buffer) - 1] = '\0';
-                    *m_value = buffer;
-
+                    *m_value = realloc (*m_value, strlen (buffer));
+                    strcpy (*m_value, buffer);
                     free (buffer);
                 }
                 else if (m_type == DT_INT)

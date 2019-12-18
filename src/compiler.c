@@ -383,6 +383,7 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
 
         size_t is_bigger  = frs_contains (text, '>');
         size_t is_smaller = frs_contains (text, '<');
+        size_t is_equal   = frs_contains (text, '=');
 
         char* v1_text;
         char* v2_text;
@@ -407,6 +408,16 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
 
             int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
             fr_register_add (&register_list, (text[is_smaller] == '=' ? REGISTER_SEQ : REGISTER_SMA) (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
+            return POINTER (m_index);
+        }
+        else if (is_equal && (text[is_equal] == '=' || text[(is_equal -= 1) - 1] == '!'))
+        {
+            strcpy (v1_text = malloc (is_equal), text);
+            v1_text[is_equal - 1] = '\0';
+            strcpy (v2_text = malloc (strlen (text) - is_equal), text + is_equal + 1);
+
+            int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+            fr_register_add (&register_list, (text[is_equal-1] == '=' ? REGISTER_EQ : REGISTER_NEQ) (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
             return POINTER (m_index);
         }
 
@@ -532,7 +543,9 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
             text[bracket_index_close] = '\0';
             text += bracket_index_open;
 
-            return INDEX (var_position, atoi (text));
+            size_t i = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+            fr_register_add (&register_list, REGISTER_IND (VALUE_INT (i), POINTER (var_position), fr_convert_to_value (text)));
+            return POINTER (i);
         }
 
         // Error variable does not exist!
@@ -700,7 +713,7 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
         Value  m_value = fr_convert_to_value (data[0]);
         size_t m_index = fr_register_add (&register_list, REGISTER_ALLOC (m_value));
 
-        size_t x = fr_register_add (&register_list, REGISTER_NEQ (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+        size_t x = fr_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
         fr_compile (data[1], variables, variable_count);
         register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
     }
@@ -717,7 +730,7 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
         Value  m_value = fr_convert_to_value (data[0]);
         size_t m_index = fr_register_add (&register_list, REGISTER_ALLOC (m_value));
 
-        size_t x = fr_register_add (&register_list, REGISTER_EQ (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+        size_t x = fr_register_add (&register_list, REGISTER_CMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
         fr_compile (data[1], variables, variable_count);
         register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
     }
@@ -735,7 +748,7 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
         Value  m_value = fr_convert_to_value (data[0]);
         size_t m_index = fr_register_add (&register_list, REGISTER_ALLOC (m_value));
 
-        size_t x = fr_register_add (&register_list, REGISTER_NEQ (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+        size_t x = fr_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
         fr_compile (data[1], variables, variable_count);
         fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (loop_index)));
         register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
@@ -752,7 +765,7 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
         Value  m_value = fr_convert_to_value (data[0]);
         size_t m_index = fr_register_add (&register_list, REGISTER_ALLOC (m_value));
 
-        size_t x = fr_register_add (&register_list, REGISTER_NEQ (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+        size_t x = fr_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
         {
             fr_compile (data[1], variables, variable_count);
         }
@@ -769,7 +782,7 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
         Value  m_value = fr_convert_to_value (data[0]);
         size_t m_index = fr_register_add (&register_list, REGISTER_ALLOC (m_value));
 
-        size_t x = fr_register_add (&register_list, REGISTER_EQ (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+        size_t x = fr_register_add (&register_list, REGISTER_CMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
         {
             fr_compile (data[1], variables, variable_count);
         }
@@ -841,6 +854,7 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
         cms_add ("# > % ;",             c_check_short,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) -> { % }",      c_loop,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# -> { % }",          c_loop,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("( % ) -> % ;",        c_loop_short,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# -> % ;",            c_loop_short,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("ret % ;",             c_return,       CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
     } ));

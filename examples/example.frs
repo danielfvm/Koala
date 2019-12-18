@@ -2,14 +2,67 @@
 <* ret doesn't work in lambda *>
 <* make index in interpreter *>
 
-<*
-for (min, max, lambda = (x) { O: x, '\n'; }) {
-    (min < max + 1) -> {
-        lambda (min);
-        min += 1;
-    }
-}
+<* START - Koala's Standart Library *>
+    <* STD - DataTypes *>
+    val STR   = "";
+    val CHAR  = 'A' - 65;
+    val INT   = 0;
+    val FLOAT = 0.0;
 
+    <* STD - Read Methode *>
+    read (type = INT) {
+        var x = type;
+        I: &x;
+        ret x;
+    }
+
+    <* STD - Print Methode *>
+    print (x) > O: x, '\n';
+
+    <* STD - Sleep Methode, working on Linux/BSD/Unix/OSX *>
+    sleep (x = FLOAT) > S: "sleep $x";
+
+    <* STD - clear text in terminal *>
+    clear () > S: "clear";
+
+    <* STD - For loop *>
+    for (min = INT, max = INT, lambda = (x) { O: x, '\n'; }) {
+        (min < max + 1) -> {
+            lambda (min);
+            min += 1;
+        }
+    }
+
+    <* STD - exit *>
+    exit (status = INT) {
+        O: "\nExit status: $status\n";
+        jump -1;
+    }
+
+    <* STD - line length *>
+    len (text) {
+        var i = 0;
+        (text[i]) -> i += 1;
+        ret i;
+    }
+
+    <* STD - abs make negative numbers positive *>
+    abs (x) > (x < 0) { ret x * (-1); } { ret x; };
+
+    <* STD - cast to char *>
+    char (x) > ret CHAR + x;
+
+    <* STD - cast to int *>
+    int (x) > ret INT + x;
+
+    <* STD - cast to string *>
+    str (x) > ret STR + x;
+
+<* END - Koala's Standart Library *>
+
+
+<* PRIME NUMBER PROGRAM *>
+<*
 isPrime (x) {
     (x < 2) > ret false;
 
@@ -27,6 +80,17 @@ for (0, 100, (i) {
 });
 *>
 
-val x = "Hallo Welt!";
 
-O: x[1], '\n';
+
+
+
+var text = STR;
+I: &text;
+
+for (' ', 'z', (i) {
+    var found = 0;
+    for (0, len (text) - 1, (c) {
+        (char (i) == text[c]) > found += 1;
+    });
+    found > O: char (i), ": ", found, '\n';
+});
