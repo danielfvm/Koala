@@ -16,6 +16,7 @@ void error (const char* msg, void* variablen, ...)
     char* arrow = malloc (nDigits * 3 + 1);
     size_t i;
 
+    *arrow = '\0';
     for (i = 0; i < nDigits; ++ i)
         strcat (arrow, "─");
     arrow[i * 3 + 1] = '\0';
@@ -129,9 +130,15 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
     // Add new variable to list ´variables´
     size_t var_add_function_path (char* path, char* name, size_t m_index, bool constant)
     {
+        if (name[0] == '\0')
+            error ("Variable Name has to be at least 1 char long!", NULL);
+
+        if (name[0] >= '0' && name[0] <= '9')
+            error ("Variable ´%s´ cannot start with a number!", name);
+
         (*variables) = realloc (*variables, sizeof (Variable) * (variable_count + 1));
 
-        if (!(*variables)) 
+        if (!(*variables))
             error ("Failed to add new variable ´%s´ to variables, ´realloc´ failed!", name);
 
         (*variables)[variable_count].position = m_index; 

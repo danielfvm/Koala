@@ -97,7 +97,14 @@ for ('A', 'z', (i) {
 *>
 
 <* cms multi bracket does not work fine! *>
+<* 
 O: {
     var x = 12;
     ret x * { ret x * 2 };
 };
+*>
+
+val 22 = 43;
+
+
+
