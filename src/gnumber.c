@@ -366,6 +366,7 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
 
     bool in_string = 0;
     bool in_char   = 0;
+    int  in_brackets_round = 0;
     int  in_brackets = 0;
 
     // Find maximum element count by searching after computes 
@@ -381,13 +382,19 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
         if (!in_string && calc[i] == '\'' && (i == 0 || calc[i-1] != '\\'))
             in_char = !in_char;
 
-        if (!in_char && !in_string && calc[i] == '(')
+        if (!in_char && !in_string && calc[i] == '{')
             in_brackets ++;
 
-        if (!in_char && !in_string && calc[i] == ')')
+        if (!in_char && !in_string && calc[i] == '}')
             in_brackets --;
 
-        if (!in_string && !in_char && !in_brackets && (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/' || calc[i] == '%'))
+        if (!in_char && !in_string && calc[i] == '(')
+            in_brackets_round ++;
+
+        if (!in_char && !in_string && calc[i] == ')')
+            in_brackets_round --;
+
+        if (!in_string && !in_char && !in_brackets && !in_brackets_round && (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/' || calc[i] == '%'))
             *size += 2;
     }
 
@@ -410,17 +417,23 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
         if (!in_string && calc[i] == '\'' && (i == 0 || calc[i-1] != '\\'))
             in_char = !in_char;
 
-        if (!in_char && !in_string && calc[i] == '(')
+        if (!in_char && !in_string && calc[i] == '{')
             in_brackets ++;
 
-        if (!in_char && !in_string && calc[i] == ')')
+        if (!in_char && !in_string && calc[i] == '}')
             in_brackets --;
+
+        if (!in_char && !in_string && calc[i] == '(')
+            in_brackets_round ++;
+
+        if (!in_char && !in_string && calc[i] == ')')
+            in_brackets_round --;
 
         // Skips at beginning & if it is not a compute
         if ((calc[i] != '+' && calc[i] != '-' && calc[i] != '*' && calc[i] != '/' && calc[i] != '%') || i == 0)
             continue;
 
-        if (in_string || in_char || in_brackets)
+        if (in_string || in_char || in_brackets || in_brackets_round)
             continue;
 
         value = frs_substr (calc, last_i, i);

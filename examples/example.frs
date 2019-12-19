@@ -8,6 +8,7 @@
     val CHAR  = 'A' - 65;
     val INT   = 0;
     val FLOAT = 0.0;
+    val BOOL  = false;
 
     <* STD - Read Methode *>
     read (type = INT) {
@@ -47,7 +48,7 @@
     }
 
     <* STD - abs make negative numbers positive *>
-    abs (x) > (x < 0) { ret x * (-1); } { ret x; };
+    abs (x) > ret x < 0 ? x * (-1) : x;
 
     <* STD - cast to char *>
     char (x) > ret CHAR + x;
@@ -82,15 +83,21 @@ for (0, 100, (i) {
 
 
 
-
-
+<*
 var text = STR;
 I: &text;
 
-for (' ', 'z', (i) {
+for ('A', 'z', (i) {
     var found = 0;
     for (0, len (text) - 1, (c) {
         (char (i) == text[c]) > found += 1;
     });
     found > O: char (i), ": ", found, '\n';
 });
+*>
+
+<* cms multi bracket does not work fine! *>
+O: {
+    var x = 12;
+    ret x * { ret x * 2 };
+};

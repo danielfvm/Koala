@@ -44,8 +44,10 @@ void fr_compiler_run ()
     free (register_list);
 }
 
-// if not 0 then fr_compile is in a function
-size_t in_function = 0;
+// in_function > 0 then fr_compile is in a function
+// in_function = 0 then fr_compile is in main
+// in_function < 0 then fr_compile is in short lambda
+int in_function = 0;
 
 // Used to set variable name;
 char* function_path = NULL;
@@ -343,7 +345,7 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
         fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
 
         // Compile function body
-        size_t old_in_function = in_function;
+        int old_in_function = in_function;
         in_function = func_pos;
         fr_compile (func_code, variables, variable_count);
         in_function = old_in_function;
@@ -368,12 +370,23 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
     // Converts a string to ´Value´ supports also different types of Values
     Value fr_convert_to_value (char* text)
     {
-        // Trim text to remove spaces
+        // Trim text begin & end
         frs_trim (&text);
 
         // Remove brackets if outside is bracket
         if (text[0] == '(' && strlen (text) == frs_find_next_bracket (0, text) + 1)
-            text[strlen (text ++) - 1] = '\0';
+            text[strlen (text ++) - 1] = '\0'; // remove start & end bracket
+
+        // short lambda
+        if (text[0] == '{' && strlen (text) == frs_find_next_bracket (0, text) + 1)
+        {
+            text[strlen (text ++) - 1] = '\0'; // remove start & end bracket
+            int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))); // alloc memory for return
+            int old_in_function = in_function = -m_index; // store old ´in_function´ and set new one (neg used for short lambda in ret)
+            fr_compile (text, variables, variable_count); // compile code in bracket
+            in_function = old_in_function; // restore old ´in_function´
+            return POINTER (m_index); // return pointer to stored memory
+        }
 
         // Boolean constant
         if (!strcmp (text, "true"))
@@ -381,12 +394,37 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
         else if (!strcmp (text, "false"))
             return VALUE_INT (false);
 
-        size_t is_bigger  = frs_contains (text, '>');
-        size_t is_smaller = frs_contains (text, '<');
-        size_t is_equal   = frs_contains (text, '=');
+        size_t is_if   = frs_contains (text, '?');
+        size_t is_else = frs_contains (text, ':');
 
-        char* v1_text;
-        char* v2_text;
+        if (is_if && is_else)
+        {
+            text[is_if - 1] = '\0';    // set '\0' at '?'
+            text[is_else  - 1] = '\0'; // set '\0' at ':'
+            Value val_condition = fr_convert_to_value (text); // create value for condition
+
+            size_t m_index = fr_register_add (&register_list, REGISTER_ALLOC (val_condition)); // alloc memory for return
+
+            size_t x = fr_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0))); // condition if
+            {
+                fr_register_add (&register_list, REGISTER_SET (VALUE_INT (m_index), fr_convert_to_value (text += is_if))); // set memory value if true
+            }
+            size_t y = fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (0))); // condition else
+            register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list)); // set ´condition if´ jump point
+            {
+                fr_register_add (&register_list, REGISTER_SET (VALUE_INT (m_index), fr_convert_to_value (text += is_else - is_if))); // set memory value if false
+            }
+            register_list[y]->reg_values[0] = VALUE_INT (fr_get_current_register_position (&register_list)); // set ´condition else´ jump point
+
+            return POINTER (m_index); // return pointer of memory
+        }
+
+        size_t is_bigger  = frs_contains (text, '>'); // >,  >=
+        size_t is_smaller = frs_contains (text, '<'); // <,  <=
+        size_t is_equal   = frs_contains (text, '='); // ==, !=
+
+        char* v1_text; // condition before compute
+        char* v2_text; // condition after  compute
 
         if (is_bigger)
         {
@@ -482,7 +520,7 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
                 return create_call_function (func_name, func_args, fr_convert_to_value);
         }
 
-        // Function / Lambda
+        // Lambda
         
         size_t func_args_end;
         size_t func_code_begin, func_code_end;
@@ -812,8 +850,19 @@ int fr_compile (char* code, Variable** variables, const size_t pre_variable_coun
 
     void c_return (CmsData* data, int size)
     {
-        fr_register_add (&register_list, REGISTER_SET (VALUE_INT (in_function + 2), fr_convert_to_value (data[0])));
-        fr_register_add (&register_list, REGISTER_JUMP (POINTER (in_function - 1)));
+        if (in_function > 0)
+        {
+            fr_register_add (&register_list, REGISTER_SET (VALUE_INT (in_function + 2), fr_convert_to_value (data[0])));
+            fr_register_add (&register_list, REGISTER_JUMP (POINTER (in_function - 1)));
+        }
+        else if (in_function == 0)
+        {
+            fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (-1)));
+        }
+        else
+        {
+            fr_register_add (&register_list, REGISTER_SET (VALUE_INT (abs(in_function)), fr_convert_to_value (data[0])));
+        }
     }
 
     // Check if c_check_else & c_check can be replaced with c_bracket...
