@@ -4,6 +4,26 @@
 #include <string.h>
 #include <stdio.h>
 
+char* frs_read_file (const char* filepath)
+{
+    char* buffer;
+    FILE* file;
+    size_t len;
+    
+    if ((file = fopen (filepath, "r")) == NULL)
+    {
+        fprintf (stderr, "Failed to open file ´%s´\n", filepath);
+        exit (EXIT_FAILURE);
+    }
+
+    buffer = NULL;
+
+    if (getdelim (&buffer, &len, '\0', file) == -1)
+        return NULL;
+
+    return buffer;
+}
+
 bool frs_has_illigal_ascii (const char* text)
 {
     for (size_t i = 0; text[i] != '\0'; ++ i)
@@ -197,9 +217,9 @@ size_t frs_contains (char* text, char c)
             in_bracket --;
 
         if (text[i] == c && (frs_is_bracket (c) || (!in_string && !in_char && !in_bracket)))
-            return i + 1;
+            return true + i;
     }
-    return 0;
+    return false;
 }
 
 void frs_filter_comment (char** text)

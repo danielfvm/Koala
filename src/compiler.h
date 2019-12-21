@@ -13,4 +13,4 @@ void  fr_compiler_init ();
 
 void  fr_compiler_run ();
 
-int   fr_compile (char* code, Variable** variables, const size_t pre_variable_count);
+int   fr_compile (char* code, Variable** variables, size_t* pre_variable_count, const bool reset_variables);

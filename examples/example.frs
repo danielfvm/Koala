@@ -1,69 +1,7 @@
-<* default value does not work! *>
-<* ret doesn't work in lambda *>
-<* make index in interpreter *>
-
-<* START - Koala's Standart Library *>
-    <* STD - DataTypes *>
-    val STR   = "";
-    val CHAR  = 'A' - 65;
-    val INT   = 0;
-    val FLOAT = 0.0;
-    val BOOL  = false;
-
-    <* STD - Read Methode *>
-    read (type = INT) {
-        var x = type;
-        I: &x;
-        ret x;
-    }
-
-    <* STD - Print Methode *>
-    print (x) > O: x, '\n';
-
-    <* STD - Sleep Methode, working on Linux/BSD/Unix/OSX *>
-    sleep (x = FLOAT) > S: "sleep $x";
-
-    <* STD - clear text in terminal *>
-    clear () > S: "clear";
-
-    <* STD - For loop *>
-    for (min = INT, max = INT, lambda = (x) { O: x, '\n'; }) {
-        (min < max + 1) -> {
-            lambda (min);
-            min += 1;
-        }
-    }
-
-    <* STD - exit *>
-    exit (status = INT) {
-        O: "\nExit status: $status\n";
-        jump -1;
-    }
-
-    <* STD - line length *>
-    len (text) {
-        var i = 0;
-        (text[i]) -> i += 1;
-        ret i;
-    }
-
-    <* STD - abs make negative numbers positive *>
-    abs (x) > ret x < 0 ? x * (-1) : x;
-
-    <* STD - cast to char *>
-    char (x) > ret CHAR + x;
-
-    <* STD - cast to int *>
-    int (x) > ret INT + x;
-
-    <* STD - cast to string *>
-    str (x) > ret STR + x;
-
-<* END - Koala's Standart Library *>
-
+inc "examples/std.frs";
 
 <* PRIME NUMBER PROGRAM *>
-<*
+
 isPrime (x) {
     (x < 2) > ret false;
 
@@ -76,35 +14,33 @@ isPrime (x) {
     ret true;
 }
 
-for (0, 100, (i) {
-    (isPrime (i)) > O: i, '\n';
-});
-*>
+<* CMS cannot find ret *>
+var y = {
+    ret (i) {
+        (isPrime (i)) > O: i, '\n';
+    };
+};
 
+for (0, 100, y);
 
-
+<* Count Ascii program *>
 <*
-var text = STR;
-I: &text;
+    var text = "";
+    I: &text;
 
-for ('A', 'z', (i) {
+    for ('A', 'z', (i) {
     var found = 0;
     for (0, len (text) - 1, (c) {
         (char (i) == text[c]) > found += 1;
     });
     found > O: char (i), ": ", found, '\n';
-});
+    });
 *>
 
-<* cms multi bracket does not work fine! *>
-<* 
+<* Short lambda example *>
+<*
 O: {
     var x = 12;
-    ret x * { ret x * 2 };
-};
+    ret x * { ret 2; };
+}, '\n';
 *>
-
-val 22 = 43;
-
-
-

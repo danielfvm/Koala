@@ -1,0 +1,7 @@
+<* FUN with pointers *>
+
+var a = 5, b = 10, c = 15;
+
+print (a);
+print (~(&a + 1));
+print (~(&a + 2));

@@ -2,7 +2,11 @@
     <* error message wrong line *>
     <* improve float system *>
     <* wrong position for arguments when calling functions with '=' *>
+    <* make index in interpreter *>
 <* END - FOUND BUGS *>
+
+<* Example program *>
+
 
 <* START - Koala's Standart Library *>
     <* STD - DataTypes *>
@@ -10,6 +14,7 @@
     val CHAR  = 'A' - 65;
     val INT   = 0;
     val FLOAT = 0.0;
+    val BOOL  = false;
 
     <* STD - Read Methode *>
     read (type = INT) {
@@ -41,8 +46,15 @@
         jump -1;
     }
 
+    <* STD - line length *>
+    len (text) {
+        var i = 0;
+        (text[i]) -> i += 1;
+        ret i;
+    }
+
     <* STD - abs make negative numbers positive *>
-    abs (x) > (x < 0) { ret x * (-1); } { ret x; };
+    abs (x) > ret x < 0 ? x * (-1) : x;
 
     <* STD - cast to char *>
     char (x) > ret CHAR + x;
@@ -54,58 +66,3 @@
     str (x) > ret STR + x;
 
 <* END - Koala's Standart Library *>
-
-
-<* Example program *>
-
-
-<* Example Calculation-Program with integrated strings *>
-<*
-    var a = 4, b = 2;
-    print ("$a + $b = ${ a + b }");
-*>
-
-
-
-<* ABC-Program using std-for *>
-<*
-    for ('a', 'z', (i) { O: "$i\n"; });
-*>
-
-
-<* FUN with Pattern *>
-<*
-    for (read (), read (), (i) { 
-        for (0, 9, (j) { 
-            O: "$i$j\t";
-        });
-        O: "\n";
-    });
-*>
-
-<* FUN with pointers *>
-<*
-    var a = 5, b = 10, c = 15;
-*>
-    <* print (~&a); also possible *>
-<*
-    print (a);
-    print (~(&a + 1));
-    print (~(&a + 2));
-*>
-
-<* ASCII - Table *>
-<*
-    var col = 7;
-    var rows = (int ('~') - int (' ')) / col + 1;
-
-    for (0, rows - 1, (i) {
-        for (0, col - 1, (j) {
-            var pos = int (' ') + i + j * rows;
-            (pos < int ('~') + 1) {
-                O: pos, ':', char (pos), '\t';
-            }
-        });
-        O: '\n';
-    });
-*>

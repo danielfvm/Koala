@@ -7,6 +7,8 @@
 
 bool   frs_has_illigal_ascii (const char* text);
 
+char*  frs_read_file (const char* filepath);
+
 int    frs_find_next_bracket (size_t p, const char* text);
 
 int    frs_find_string_end (size_t p, const char* text);

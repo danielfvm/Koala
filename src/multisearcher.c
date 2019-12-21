@@ -173,14 +173,9 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                     {
                         // last ´template_syntax´ with > ' '
                         for (new_text_char_i -= 1; text[new_text_char_i] <= ' '; -- new_text_char_i);
-                       /* if ((text[new_text_char_i] == '('  || text[new_text_char_i] == '['  || text[new_text_char_i] == '{') && CMS_CHECK (template_options, CMS_USE_BRACKET_SEARCH_ALGORITHM))
-                            new_text_char_i = cms_find_next_bracket (new_text_char_i, text);
-                        else while (text[new_text_char_i] != template_syntax[i])
-                            new_text_char_i ++;
-                       */
-                        // might be wrong!
-  //                      puts("start");
-                        while (text[new_text_char_i] != template_syntax[i])
+
+                        // might be wrong! -> ´new_text_char_i´ jumps sometimes out of text_size -> simple fix might not work
+                        while (text[new_text_char_i] != template_syntax[i] && new_text_char_i < text_size)
                         {
                             if (text[new_text_char_i] == '\'' || text[new_text_char_i] == '"') 
                                 new_text_char_i = frs_find_string_end (new_text_char_i, text);
@@ -190,8 +185,6 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                             else
                                 new_text_char_i ++;
                         }
-//                        puts("end");
-
                     }
 
                     // Size of new ´data_str´
