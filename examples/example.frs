@@ -15,13 +15,16 @@ isPrime (x) {
 }
 
 <* CMS cannot find ret *>
-var y = {
-    ret (i) {
-        (isPrime (i)) > O: i, '\n';
-    };
-};
+<*
+    get () {
+        ret (i) {
+            (isPrime (i)) > O: i, '\n';
+        };
+    }
+    var y = get ();
 
-for (0, 100, y);
+    for (0, 100, y);
+*>
 
 <* Count Ascii program *>
 <*
@@ -29,11 +32,11 @@ for (0, 100, y);
     I: &text;
 
     for ('A', 'z', (i) {
-    var found = 0;
-    for (0, len (text) - 1, (c) {
-        (char (i) == text[c]) > found += 1;
-    });
-    found > O: char (i), ": ", found, '\n';
+        var found = 0;
+        for (0, len (text) - 1, (c) {
+            (char (i) == text[c]) > found += 1;
+        });
+        found > O: char (i), ": ", found, '\n';
     });
 *>
 
@@ -44,3 +47,12 @@ O: {
     ret x * { ret 2; };
 }, '\n';
 *>
+
+<* Found bug x in&out of scope causes problems *>
+<*
+    ((x) { 
+        !x > O: "N\n";
+        x > O: "Y\n";
+    }) (x);
+*>
+

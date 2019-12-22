@@ -1,6 +1,6 @@
 <* ASCII - Table *>
 
-inc "std.frs";
+inc "examples/std.frs";
 
 var col = 7;
 var rows = (int ('~') - int (' ')) / col + 1;
@@ -8,9 +8,7 @@ var rows = (int ('~') - int (' ')) / col + 1;
 for (0, rows - 1, (i) {
     for (0, col - 1, (j) {
         var pos = int (' ') + i + j * rows;
-        (pos < int ('~') + 1) {
-            O: pos, ':', char (pos), '\t';
-        }
+        (pos < int ('~') + 1) > O: pos, ':', char (pos), '\t';
     });
     O: '\n';
 });

@@ -1,16 +1,12 @@
-println (x) {
-    O: println.x, '\n';
-}
+inc "examples/std.frs";
 
 test (x, y) {
-    println ("$test.x\t$test.y");
-    test.x {
-        test (test.x - 1, test.y + 1);
-    } {
-        println ("- RETURN -");
-    }
+    print ("${test.x}\t${test.y}");
 
-    println ("$test.x\t$test.y");
+    test.x > test (test.x - 1, test.y + 1);
+    !test.x > print ("- RETURN -");
+
+    print ("${test.x}\t${test.y}");
 }
 
 test (10);

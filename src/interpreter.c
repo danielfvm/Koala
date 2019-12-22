@@ -189,6 +189,11 @@ Register* REGISTER_CIN (Value m_index)
     return CREATE_REGISTER_1 (CIN, m_index);
 }
 
+Register* REGISTER_GCH (Value m_index)
+{
+    return CREATE_REGISTER_1 (GCH, m_index);
+}
+
 Register* REGISTER_SET (Value m_index, Value m_value)
 {
     return CREATE_REGISTER_2 (SET, m_index, m_value);
@@ -267,6 +272,11 @@ Register* REGISTER_PUSH (Value m_index)
 Register* REGISTER_POP (Value m_index)
 {
     return CREATE_REGISTER_1 (POP, m_index);
+}
+
+Register* REGISTER_CODE (Value code)
+{
+    return CREATE_REGISTER_1 (CODE, code);
 }
 
 void fr_strcpy (char** dest, const char* src)
@@ -593,6 +603,7 @@ int fr_run (const Registry* register_list)
                     printf ("%c", (intptr_t) fr_get_memory (reg->reg_values[0]));
                 else if (m_type == DT_FLOAT)
                     printf ("%f", (intptr_t) fr_get_memory (reg->reg_values[0]) / FLOAT_CONV_VALUE);
+                fflush(stdout);
                 continue;
             }
             case CIN:
@@ -628,6 +639,14 @@ int fr_run (const Registry* register_list)
                     *m_value = (void*)(intptr_t)(value * FLOAT_CONV_VALUE);
                     getchar();
                 }
+                continue;
+            }
+            case GCH:
+            {
+                system ("/bin/stty raw");
+                register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type = DT_CHAR; 
+                register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].value = (void*)(intptr_t)getchar();
+                system ("/bin/stty cooked");
                 continue;
             }
             case JUMP:

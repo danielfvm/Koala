@@ -32,7 +32,9 @@ enum Execution
     POP,
     IND,
     CMP,
-    NCMP
+    NCMP,
+    GCH,
+    CODE
 };
 
 enum DataType
@@ -110,6 +112,8 @@ Register* REGISTER_MOD (Value m_index, Value m_mul);
 
 Register* REGISTER_CIN (Value m_index);
 
+Register* REGISTER_GCH (Value m_index);
+
 Register* REGISTER_DIV (Value m_index, Value m_div);
 
 Register* REGISTER_SET (Value m_index, Value m_value);
@@ -144,6 +148,7 @@ Register* REGISTER_PUSH (Value m_index);
 
 Register* REGISTER_POP (Value m_index);
 
+Register* REGISTER_CODE (Value code);
 
 int fr_run (const Registry* register_list);
 

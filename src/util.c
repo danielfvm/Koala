@@ -272,6 +272,9 @@ bool frs_is_str_concat (char* str)
         if (text[i] == '\\' && i >= 1 && text[i-1] == '\\' && ++ i)
             continue;
 
+        if (text[i] == '$' && text[i + 1] == '{')
+            i = frs_find_next_bracket (i + 1, text);
+
         if (text[i] == '"' && (i == 0 || text[i-1] != '\\'))
             is_string = !is_string;
         else if (!is_string)

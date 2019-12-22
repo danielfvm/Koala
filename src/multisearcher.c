@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 #define CMS_CHECK(x, y) ((x & y) == y)
 
@@ -64,6 +65,30 @@ int cms_get_current_line_number ()
 {
     return cms_line_number;
 }
+
+
+void warning (const char* msg, const void* variablen, ...)
+{
+    int line_number = cms_get_current_line_number ();
+    int nDigits = floor (log10 (abs (line_number))) + 1;
+
+    char* arrow = malloc (nDigits * 3 + 1);
+    size_t i;
+
+    *arrow = '\0';
+    for (i = 0; i < nDigits; ++ i)
+        strcat (arrow, "─");
+    arrow[i * 3 + 1] = '\0';
+
+    char* line = cms_get_current_line ();
+    frs_trim (&line);
+    fprintf (stderr, "\x1b[90m[\x1b[33m%d\x1b[90m]\x1b[92m─►\x1b[93m %s\n \x1b[92m└%s─► \x1b[95m(WARN) ", line_number, line, arrow);
+    fprintf (stderr, msg, variablen);
+    fprintf (stderr, "\x1b[0m\n");
+
+    free (arrow);
+}
+
 
 void cms_find (const char* text, CmsTemplate* cms_template)
 {
@@ -185,6 +210,9 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                             else
                                 new_text_char_i ++;
                         }
+
+                        if (new_text_char_i >= text_size && template_syntax[i] == ';')
+                            warning ("Symbol ´;´ might be missing in this statement!", NULL);
                     }
 
                     // Size of new ´data_str´
@@ -232,7 +260,11 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                 }
                 // If ´template_char´ is not equal ´text_char´ than the ´text´ is not equal to the given syntax
                 if (template_char != text_char)
+                {
+                    if (template_char == ';' && template_syntax_i == strlen (template_syntax) - 1)
+                        warning ("Symbol ´;´ might be missing in this statement!", NULL);
                     break;
+                }
 
                 // Update text index
                 text_char_i ++;

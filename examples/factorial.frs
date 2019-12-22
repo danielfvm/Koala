@@ -1,9 +1,7 @@
 factorial (x, y = 1) {
-    ! factorial.x {
-        ret factorial.y;
-    }   
+    !factorial.x > ret factorial.y;
     ret factorial (factorial.x - 1, factorial.y * factorial.x);
 }
 
-O: factorial (10);
+O: factorial (4);
 
