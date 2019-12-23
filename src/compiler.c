@@ -85,6 +85,23 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         char* full_var_name;
         int i;
 
+        // Variable has full varname path beginning from ´local.´
+        for (i = variable_count - 1; i >= 0; -- i)
+        {
+            full_var_name = malloc (strlen ((*variables)[i].function_path) + strlen ((*variables)[i].name) + 2);
+            sprintf (full_var_name, "%s.%s", (*variables)[i].function_path, (*variables)[i].name);
+
+            bool exist = !strcmp (full_var_name + strlen ("local") + 1, name);
+
+            free (full_var_name);
+
+            if (!exist)
+                continue;
+
+            variable = (*variables)[i];
+            goto var_get_pos_by_name_return;
+        }
+
         // Variable has full varname path
         for (i = variable_count - 1; i >= 0; -- i)
         {
@@ -112,22 +129,16 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             goto var_get_pos_by_name_return;
         }
 
-        // Variable has full varname path beginning from ´local.´
+        // Variable not in same scope
         for (i = variable_count - 1; i >= 0; -- i)
         {
-            full_var_name = malloc (strlen ((*variables)[i].function_path) + strlen ((*variables)[i].name) + 2);
-            sprintf (full_var_name, "%s.%s", (*variables)[i].function_path, (*variables)[i].name);
-
-            bool exist = !strcmp (full_var_name + strlen ("local") + 1, name);
-
-            free (full_var_name);
-
-            if (!exist)
+            if (strcmp ((*variables)[i].name, name))
                 continue;
 
             variable = (*variables)[i];
             goto var_get_pos_by_name_return;
         }
+
 
         return -1;
 
@@ -147,7 +158,6 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
         if (name[0] >= '0' && name[0] <= '9')
             error ("Variable ´%s´ cannot start with a number!", name);
-
 
         for (int i = variable_count - 1; i >= 0; -- i)
             if (!strcmp ((*variables)[i].name, name) && !strcmp ((*variables)[i].function_path, path))
@@ -518,7 +528,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         }
 
         // ´text´ is ´int´
-        if (var_is_number || text[strlen (text) - 1] == 'i')
+        if (var_is_number || (text[strlen (text) - 1] == 'i' && text[1] != '\0'))
             return VALUE_INT (atoi (text));
         else if (text[0] == '0' && text[1] == 'x')
             return VALUE_INT (strtol (text, NULL, 16));
@@ -526,7 +536,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             return VALUE_INT (strtol (text + 1, NULL, 16));
 
         // ´text´ is ´float´
-        if (var_is_float || text[strlen (text) - 1] == 'l')
+        if (var_is_float || (text[strlen (text) - 1] == 'l' && text[1] != '\0'))
             return VALUE_FLOAT (atof (text));
 
         // calculation
@@ -574,9 +584,15 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             func_code = realloc (func_code, func_code_end - func_code_begin);
             frs_trim (&func_code);
 
-            return create_function (NULL, func_args, func_code, fr_convert_to_value);
-        }
+            static size_t lambda_count = 0;
+            lambda_count ++;
 
+            char* lambda_name = malloc (20);
+            sprintf (lambda_name, "l%d", lambda_count);
+            lambda_name = realloc (lambda_name, strlen (lambda_name) + 1);
+
+            return create_function (lambda_name, func_args, func_code, fr_convert_to_value);
+        }
 
         // returns value of variable -> ´pointer´
         int var_position;

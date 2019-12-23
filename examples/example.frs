@@ -1,3 +1,4 @@
+inc "examples/std.frs";
 
 <* PRIME NUMBER PROGRAM *>
 <*
@@ -27,23 +28,13 @@ isPrime (x) {
 *>
 
 <* Count Ascii program *>
-<*
-    var text = "";
-    I: &text;
+var text = "";
+I: &text;
 
-    for ('A', 'z', (i) {
-        var found = 0;
-        for (0, len (text) - 1, (c) {
-            (char (i) == text[c]) > found += 1;
-        });
-        found > O: char (i), ": ", found, '\n';
+for ('A', 'z', (i) {
+    var found = 0;
+    for (0, len (text) - 1, (c) {
+        (char (i) == text[c]) > found += 1;
     });
-*>
-
-<* Short lambda example *>
-<*
-O: {
-    var x = 12;
-    ret x * { ret 2; };
-}, '\n';
-*>
+    found > O: char (i), ": ", found, '\n';
+});

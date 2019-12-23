@@ -34,7 +34,7 @@
 
     <* STD - For loop *>
     for (min = INT, max = INT, lambda = (x) { O: x, '\n'; }) {
-        (min < max + 1) -> {
+        (min <= max) -> {
             lambda (min);
             min += 1;
         }
@@ -47,10 +47,9 @@
     }
 
     <* STD - line length *>
-    len (text) {
-        var i = 0;
-        (text[i]) -> i += 1;
-        ret i;
+    len (text, size = 0) {
+        (text[size]) -> size += 1;
+        ret size;
     }
 
     <* STD - abs make negative numbers positive *>
