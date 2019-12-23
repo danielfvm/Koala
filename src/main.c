@@ -13,7 +13,7 @@ int main (int argc, char** argv)
     fr_compiler_init ();
 
     Variable* variables;
-    size_t    variable_count = 0;
+    size_t    variables_count = 0;
 
     if (!(variables = malloc (sizeof (Variable))))
     {
@@ -27,7 +27,7 @@ int main (int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    fr_compile (frs_read_file (argv[1]), &variables, &variable_count, true);
+    fr_compile (frs_read_file (argv[1]), &variables, &variables_count, true);
 
     fr_compiler_run ();
 

@@ -1,5 +1,4 @@
-x = 0.0;
-
-while True:
-    x += 1;
-    print('\r' + str(x), end='')
+x = 0
+while (True):
+    print (x)
+    x += 1

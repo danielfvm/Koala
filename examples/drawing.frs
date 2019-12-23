@@ -49,7 +49,7 @@ true -> {
     O: "██";
 
     moveTo (0, MAX_HEIGHT + 3 + 2);
-    GC: &direction;
+    I(single): &direction;
 
     <* Movement *>
     (direction == 'w') > snake_y -= 1;

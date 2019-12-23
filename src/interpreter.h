@@ -11,8 +11,8 @@ enum Execution
 {
     NONE,
     ALLOC,
-    OUT,
-    CIN,
+    PRINT,
+    READ,
     EQ,
     NEQ,
     BIG,
@@ -33,8 +33,9 @@ enum Execution
     IND,
     CMP,
     NCMP,
-    GCH,
-    CODE
+    READ_CHAR,
+    CODE,
+    FLUSH
 };
 
 enum DataType
@@ -110,9 +111,9 @@ Register* REGISTER_MUL (Value m_index, Value m_mul);
 
 Register* REGISTER_MOD (Value m_index, Value m_mul);
 
-Register* REGISTER_CIN (Value m_index);
+Register* REGISTER_READ (Value m_index);
 
-Register* REGISTER_GCH (Value m_index);
+Register* REGISTER_READ_CHAR (Value m_index);
 
 Register* REGISTER_DIV (Value m_index, Value m_div);
 
@@ -140,7 +141,9 @@ Register* REGISTER_SEQ (Value m_value1, Value m_value2, Value m_index);
 
 Register* REGISTER_JUMP (Value position);
 
-Register* REGISTER_OUT (Value m_index);
+Register* REGISTER_PRINT (Value m_index);
+
+Register* REGISTER_FLUSH (Value m_index);
 
 Register* REGISTER_NEG (Value m_index);
 

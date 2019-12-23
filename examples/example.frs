@@ -1,7 +1,6 @@
-inc "examples/std.frs";
 
 <* PRIME NUMBER PROGRAM *>
-
+<*
 isPrime (x) {
     (x < 2) > ret false;
 
@@ -13,6 +12,7 @@ isPrime (x) {
 
     ret true;
 }
+*>
 
 <* CMS cannot find ret *>
 <*
@@ -47,12 +47,3 @@ O: {
     ret x * { ret 2; };
 }, '\n';
 *>
-
-<* Found bug x in&out of scope causes problems *>
-<*
-    ((x) { 
-        !x > O: "N\n";
-        x > O: "Y\n";
-    }) (x);
-*>
-

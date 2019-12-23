@@ -45,50 +45,11 @@ size_t fr_get_current_register_position (Registry** register_list)
     return i;
 }
 
-/*
-char* fr_get_register_type_as_name (Register* reg)
-{
-    switch (reg->reg_type)
-    {
-        case ALLOC: return "ALLOC";
-        case OUT: return "OUT";
-        case CIN: return "CIN";
-        case EQ: return "EQ";
-        case NEQ: return "NEQ";
-        case BIG: return "BIG";
-        case SMA: return "SMA";
-        case BEQ: return "BEQ";
-        case SEQ: return "SEQ";
-        case JUMP: return "JUMP";
-        case ADD: return "ADD";
-        case SUB: return "SUB";
-        case MUL: return "MUL";
-        case DIV: return "DIV";
-        case SET: return "SET";
-        case SYS: return "SYS";
-        case NEG: return "NEG";
-        case PUSH: return "PUSH";
-        case POP: return "POP";
-    }
+Value POINTER (int m_pointer) { return (Value) { DT_POINTER, VALUE_TYPE_POINTER, (void*)(intptr_t) m_pointer }; }
 
-    return "NONE";
-}
-*/
+Value POINTER_POINTER (int m_pointer) { return (Value) { DT_POINTER_POINTER, VALUE_TYPE_POINTER_POINTER, (void*)(intptr_t) m_pointer }; }
 
-Value POINTER (int m_pointer)
-{
-    return (Value) { DT_POINTER, VALUE_TYPE_POINTER, (void*)(intptr_t) m_pointer };
-}
-
-Value POINTER_POINTER (int m_pointer)
-{
-    return (Value) { DT_POINTER_POINTER, VALUE_TYPE_POINTER_POINTER, (void*)(intptr_t) m_pointer };
-}
-
-Value VALUE (byte data_type, void* value)
-{
-    return (Value) { data_type, VALUE_TYPE_VALUE, value };
-}
+Value VALUE (byte data_type, void* value) { return (Value) { data_type, VALUE_TYPE_VALUE, value }; }
 
 Value VALUE_STR (void* value)
 {
@@ -97,32 +58,15 @@ Value VALUE_STR (void* value)
     return (Value) { DT_STRING, VALUE_TYPE_VALUE, str };
 }
 
-Value VALUE_CHAR (char value)
-{
-    return (Value) { DT_CHAR, VALUE_TYPE_VALUE, (void*)(intptr_t) value };
-}
+Value VALUE_CHAR (char value) { return (Value) { DT_CHAR, VALUE_TYPE_VALUE, (void*)(intptr_t) value }; }
 
-Value VALUE_INT (int value)
-{
-    return (Value) { DT_INT, VALUE_TYPE_VALUE, (void*)(intptr_t) value };
-}
+Value VALUE_INT (int value) { return (Value) { DT_INT, VALUE_TYPE_VALUE, (void*)(intptr_t) value }; }
 
+Value VALUE_FLOAT (float value) { return (Value) { DT_FLOAT, VALUE_TYPE_VALUE, (void*)(long long)(value * FLOAT_CONV_VALUE) }; }
 
+Value VALUE_NULL () { return (Value) { DT_NONE, VALUE_TYPE_VALUE, NULL }; }
 
-Value VALUE_FLOAT (float value)
-{
-    return (Value) { DT_FLOAT, VALUE_TYPE_VALUE, (void*)(long long)(value * FLOAT_CONV_VALUE) };
-}
-
-Value VALUE_NULL ()
-{
-    return (Value) { DT_NONE, VALUE_TYPE_VALUE, NULL };
-}
-
-Value VALUE_VALUE (Value value)
-{
-    return (Value) { value.data_type, value.index, value.value };
-}
+Value VALUE_VALUE (Value value) { return (Value) { value.data_type, value.index, value.value }; }
 
 Register* CREATE_REGISTER_1 (byte type, Value one)
 {
@@ -154,130 +98,57 @@ Register* CREATE_REGISTER_3 (byte type, Value one, Value two, Value three)
     return reg;
 }
 
-Register* REGISTER_ALLOC (Value m_value)
-{
-    return CREATE_REGISTER_2 (ALLOC, VALUE_NULL (), m_value);
-}
+Register* REGISTER_ALLOC (Value m_value) { return CREATE_REGISTER_2 (ALLOC, VALUE_NULL (), m_value); }
 
-Register* REGISTER_ADD (Value m_index, Value m_add)
-{
-    return CREATE_REGISTER_2 (ADD, m_index, m_add);
-}
+Register* REGISTER_ADD (Value m_index, Value m_add) { return CREATE_REGISTER_2 (ADD, m_index, m_add); }
 
-Register* REGISTER_SUB (Value m_index, Value m_sub)
-{
-    return CREATE_REGISTER_2 (SUB, m_index, m_sub);
-}
+Register* REGISTER_SUB (Value m_index, Value m_sub) { return CREATE_REGISTER_2 (SUB, m_index, m_sub); }
 
-Register* REGISTER_MUL (Value m_index, Value m_mul)
-{
-    return CREATE_REGISTER_2 (MUL, m_index, m_mul);
-}
+Register* REGISTER_MUL (Value m_index, Value m_mul) { return CREATE_REGISTER_2 (MUL, m_index, m_mul); }
 
-Register* REGISTER_MOD (Value m_index, Value m_mul)
-{
-    return CREATE_REGISTER_2 (MOD, m_index, m_mul);
-}
+Register* REGISTER_MOD (Value m_index, Value m_mul) { return CREATE_REGISTER_2 (MOD, m_index, m_mul); }
 
-Register* REGISTER_DIV (Value m_index, Value m_div)
-{
-    return CREATE_REGISTER_2 (DIV, m_index, m_div);
-}
+Register* REGISTER_DIV (Value m_index, Value m_div) { return CREATE_REGISTER_2 (DIV, m_index, m_div); }
 
-Register* REGISTER_CIN (Value m_index)
-{
-    return CREATE_REGISTER_1 (CIN, m_index);
-}
+Register* REGISTER_READ (Value m_index) { return CREATE_REGISTER_1 (READ, m_index); }
 
-Register* REGISTER_GCH (Value m_index)
-{
-    return CREATE_REGISTER_1 (GCH, m_index);
-}
+Register* REGISTER_READ_CHAR (Value m_index) { return CREATE_REGISTER_1 (READ_CHAR, m_index); }
 
-Register* REGISTER_SET (Value m_index, Value m_value)
-{
-    return CREATE_REGISTER_2 (SET, m_index, m_value);
-}
+Register* REGISTER_SET (Value m_index, Value m_value) { return CREATE_REGISTER_2 (SET, m_index, m_value); }
 
-Register* REGISTER_IND (Value m_index, Value m_value, Value m_value_index)
-{
-    return CREATE_REGISTER_3 (IND, m_index, m_value, m_value_index);
-}
+Register* REGISTER_IND (Value m_index, Value m_value, Value m_value_index) { return CREATE_REGISTER_3 (IND, m_index, m_value, m_value_index); }
 
-Register* REGISTER_EQ (Value m_value1, Value m_value2, Value not_position)
-{
-    return CREATE_REGISTER_3 (EQ, m_value1, m_value2, not_position);
-}
+Register* REGISTER_EQ (Value m_value1, Value m_value2, Value not_position) { return CREATE_REGISTER_3 (EQ, m_value1, m_value2, not_position); }
 
-Register* REGISTER_NEQ (Value m_value1, Value m_value2, Value not_position)
-{
-    return CREATE_REGISTER_3 (NEQ, m_value1, m_value2, not_position);
-}
+Register* REGISTER_NEQ (Value m_value1, Value m_value2, Value not_position) { return CREATE_REGISTER_3 (NEQ, m_value1, m_value2, not_position); }
 
-Register* REGISTER_CMP (Value m_value1, Value m_value2, Value not_position)
-{
-    return CREATE_REGISTER_3 (CMP, m_value1, m_value2, not_position);
-}
+Register* REGISTER_CMP (Value m_value1, Value m_value2, Value not_position) { return CREATE_REGISTER_3 (CMP, m_value1, m_value2, not_position); }
 
-Register* REGISTER_NCMP (Value m_value1, Value m_value2, Value not_position)
-{
-    return CREATE_REGISTER_3 (NCMP, m_value1, m_value2, not_position);
-}
+Register* REGISTER_NCMP (Value m_value1, Value m_value2, Value not_position) { return CREATE_REGISTER_3 (NCMP, m_value1, m_value2, not_position); }
 
-Register* REGISTER_SYS (Value cmd)
-{
-    return CREATE_REGISTER_1 (SYS, cmd);
-}
+Register* REGISTER_SYS (Value cmd) { return CREATE_REGISTER_1 (SYS, cmd); }
 
-Register* REGISTER_BIG (Value m_value1, Value m_value2, Value m_index)
-{
-    return CREATE_REGISTER_3 (BIG, m_value1, m_value2, m_index);
-}
+Register* REGISTER_BIG (Value m_value1, Value m_value2, Value m_index) { return CREATE_REGISTER_3 (BIG, m_value1, m_value2, m_index); }
 
-Register* REGISTER_SMA (Value m_value1, Value m_value2, Value m_index)
-{
-    return CREATE_REGISTER_3 (SMA, m_value1, m_value2, m_index);
-}
+Register* REGISTER_SMA (Value m_value1, Value m_value2, Value m_index) { return CREATE_REGISTER_3 (SMA, m_value1, m_value2, m_index); }
 
-Register* REGISTER_BEQ (Value m_value1, Value m_value2, Value m_index)
-{
-    return CREATE_REGISTER_3 (BEQ, m_value1, m_value2, m_index);
-}
+Register* REGISTER_BEQ (Value m_value1, Value m_value2, Value m_index) { return CREATE_REGISTER_3 (BEQ, m_value1, m_value2, m_index); }
 
-Register* REGISTER_SEQ (Value m_value1, Value m_value2, Value m_index)
-{
-    return CREATE_REGISTER_3 (SEQ, m_value1, m_value2, m_index);
-}
+Register* REGISTER_SEQ (Value m_value1, Value m_value2, Value m_index) { return CREATE_REGISTER_3 (SEQ, m_value1, m_value2, m_index); }
 
-Register* REGISTER_JUMP (Value position)
-{
-    return CREATE_REGISTER_1 (JUMP, position);
-}
+Register* REGISTER_JUMP (Value position) { return CREATE_REGISTER_1 (JUMP, position); }
 
-Register* REGISTER_OUT (Value m_index)
-{
-    return CREATE_REGISTER_1 (OUT, m_index);
-}
+Register* REGISTER_PRINT (Value m_index) { return CREATE_REGISTER_1 (PRINT, m_index); }
 
-Register* REGISTER_NEG (Value m_index)
-{
-    return CREATE_REGISTER_1 (NEG, m_index);
-}
+Register* REGISTER_FLUSH (Value m_index) { return CREATE_REGISTER_1 (FLUSH, m_index); }
 
-Register* REGISTER_PUSH (Value m_index)
-{
-    return CREATE_REGISTER_1 (PUSH, m_index);
-}
+Register* REGISTER_NEG (Value m_index) { return CREATE_REGISTER_1 (NEG, m_index); }
 
-Register* REGISTER_POP (Value m_index)
-{
-    return CREATE_REGISTER_1 (POP, m_index);
-}
+Register* REGISTER_PUSH (Value m_index) { return CREATE_REGISTER_1 (PUSH, m_index); }
 
-Register* REGISTER_CODE (Value code)
-{
-    return CREATE_REGISTER_1 (CODE, code);
-}
+Register* REGISTER_POP (Value m_index) { return CREATE_REGISTER_1 (POP, m_index); }
+
+Register* REGISTER_CODE (Value code) { return CREATE_REGISTER_1 (CODE, code); }
 
 void fr_strcpy (char** dest, const char* src)
 {
@@ -592,7 +463,7 @@ int fr_run (const Registry* register_list)
                 fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) != (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
                 continue;
             }
-            case OUT:
+            case PRINT:
             {
                 byte m_type = fr_get_data_type (reg->reg_values[0]); 
                 if (m_type == DT_STRING)
@@ -603,10 +474,23 @@ int fr_run (const Registry* register_list)
                     printf ("%c", (intptr_t) fr_get_memory (reg->reg_values[0]));
                 else if (m_type == DT_FLOAT)
                     printf ("%f", (intptr_t) fr_get_memory (reg->reg_values[0]) / FLOAT_CONV_VALUE);
-                fflush(stdout);
                 continue;
             }
-            case CIN:
+            case FLUSH:
+            {
+                byte m_type = fr_get_data_type (reg->reg_values[0]); 
+                if (m_type == DT_STRING)
+                    printf ("%s", (char*) fr_get_memory (reg->reg_values[0]));
+                else if (m_type == DT_INT)
+                    printf ("%d", (intptr_t) fr_get_memory (reg->reg_values[0]));
+                else if (m_type == DT_CHAR)
+                    printf ("%c", (intptr_t) fr_get_memory (reg->reg_values[0]));
+                else if (m_type == DT_FLOAT)
+                    printf ("%f", (intptr_t) fr_get_memory (reg->reg_values[0]) / FLOAT_CONV_VALUE);
+                fflush (NULL);
+                continue;
+            }
+            case READ:
             {
                 byte   m_type  =  register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type; 
                 void** m_value = &register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].value;
@@ -641,7 +525,7 @@ int fr_run (const Registry* register_list)
                 }
                 continue;
             }
-            case GCH:
+            case READ_CHAR:
             {
                 system ("/bin/stty raw");
                 register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type = DT_CHAR; 

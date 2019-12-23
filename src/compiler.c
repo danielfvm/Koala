@@ -36,10 +36,7 @@ void error (const char* msg, const void* variablen, ...)
 Registry* register_list;
 
 // Create ´register_list´ which is used to save the compiled commands
-void fr_compiler_init ()
-{
-    fr_register_create (&register_list);
-}
+void fr_compiler_init () { fr_register_create (&register_list); }
 
 // Run the saved commands in ´register_list´
 void fr_compiler_run ()
@@ -59,7 +56,6 @@ char* function_path = NULL;
 // scope, ret back jump position stored in array to set later -> TODO: fix bug if multiple ´scope´ ret
 size_t scope_jump_back[100];
 size_t scope_jump_back_size = 0;
-
 
 // Here the code will be compiled into a list of registers -> ´register_list´
 int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, const bool reset_variables)
@@ -152,6 +148,11 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         if (name[0] >= '0' && name[0] <= '9')
             error ("Variable ´%s´ cannot start with a number!", name);
 
+
+        for (int i = variable_count - 1; i >= 0; -- i)
+            if (!strcmp ((*variables)[i].name, name) && !strcmp ((*variables)[i].function_path, path))
+                error ("Variable ´%s´ already exists in this scope!", name);
+
         (*variables) = realloc (*variables, sizeof (Variable) * (variable_count + 1));
 
         if (!(*variables))
@@ -167,10 +168,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         return m_index;
     }
 
-    size_t var_add (const char* name, const size_t m_index, const bool constant)
-    {
-        var_add_function_path (function_path, name, m_index, constant);
-    }
+    size_t var_add (const char* name, const size_t m_index, const bool constant) { var_add_function_path (function_path, name, m_index, constant); }
 
     // Doesn't work with ´\´ and ´\\´
     // Used for special string inserts example: "${}" or "$VARIABLE"
@@ -257,11 +255,9 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
     }
 
 
-    // WRONG POSITION FOR ARGUMENTS
+    // TODO: WRONG POSITION FOR ARGUMENTS
     Value create_call_function (char* func_name, char* func_args, Value (fr_convert_to_value) (char* text))
     {
-        // printf (">>> %s ( %s ) ;\n", func_name, func_args);
-
         char** args;
         size_t length = 0; 
 
@@ -360,7 +356,6 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
 
         // Allocate memory for function position
-        
         Value value_funk_position = VALUE_INT (fr_get_current_register_position (&register_list) + 2);
         func_pos = fr_register_add (&register_list, REGISTER_ALLOC (value_funk_position));
         if (func_name != NULL)
@@ -400,7 +395,6 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
     {
         // Trim text begin & end
         frs_trim (&text);
-    
 
         // Remove brackets if outside is bracket
         if (text[0] == '(' && strlen (text) == frs_find_next_bracket (0, text) + 1)
@@ -524,11 +518,15 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         }
 
         // ´text´ is ´int´
-        if (var_is_number)
+        if (var_is_number || text[strlen (text) - 1] == 'i')
             return VALUE_INT (atoi (text));
+        else if (text[0] == '0' && text[1] == 'x')
+            return VALUE_INT (strtol (text, NULL, 16));
+        else if (text[0] == '#')
+            return VALUE_INT (strtol (text + 1, NULL, 16));
 
         // ´text´ is ´float´
-        if (var_is_float)
+        if (var_is_float || text[strlen (text) - 1] == 'l')
             return VALUE_FLOAT (atof (text));
 
         // calculation
@@ -558,7 +556,6 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         }
 
         // Lambda
-        
         size_t func_args_end;
         size_t func_code_begin, func_code_end;
 
@@ -652,126 +649,57 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         }
     }
 
-    void c_alloc (CmsData* data, int size)
-    {
-        fr_do_alloc (data[0], false);
-    }
-
-    void c_alloc_const (CmsData* data, int size)
-    {
-        fr_do_alloc (data[0], true);
-    }
-
     void c_clabel (CmsData* data, int size)
     {
         var_add_function_path ("local", data[0], fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (fr_get_current_register_position (&register_list)))), true);
     }
 
-    void c_jlabel (CmsData* data, int size)
-    {
-        fr_register_add (&register_list, REGISTER_JUMP (fr_convert_to_value (data[0])));
-    }
+    void c_alloc (CmsData* data, int size) { fr_do_alloc (data[0], false); }
 
-    void c_set (CmsData* data, int size)
-    {
-        fr_register_add (&register_list, REGISTER_SET (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1])));
-    }
+    void c_alloc_const (CmsData* data, int size) { fr_do_alloc (data[0], true); }
 
-    void c_add (CmsData* data, int size)
-    {
-        fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1])));
-    }
+    void c_jlabel (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_JUMP (fr_convert_to_value (data[0]))); }
 
-    void c_sub (CmsData* data, int size)
-    {
-        fr_register_add (&register_list, REGISTER_SUB (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1])));
-    }
+    void c_set (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_SET (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1]))); }
 
-    void c_mul (CmsData* data, int size)
-    {
-        fr_register_add (&register_list, REGISTER_MUL (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1])));
-    }
+    void c_add (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1]))); }
 
-    void c_div (CmsData* data, int size)
-    {
-        fr_register_add (&register_list, REGISTER_DIV (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1])));
-    }
+    void c_sub (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_SUB (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1]))); }
 
+    void c_mul (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_MUL (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1]))); }
 
+    void c_div (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_DIV (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1]))); }
 
-    void c_set_pointer (CmsData* data, int size)
-    {
-        fr_register_add (&register_list, REGISTER_SET (fr_convert_to_value (data[0]), fr_convert_to_value (data[1])));
-    }
+    void c_set_pointer (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_SET (fr_convert_to_value (data[0]), fr_convert_to_value (data[1]))); }
 
-    void c_add_pointer (CmsData* data, int size)
-    {
-        fr_register_add (&register_list, REGISTER_ADD (fr_convert_to_value (data[0]), fr_convert_to_value (data[1])));
-    }
+    void c_add_pointer (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_ADD (fr_convert_to_value (data[0]), fr_convert_to_value (data[1]))); }
 
-    void c_sub_pointer (CmsData* data, int size)
-    {
-        fr_register_add (&register_list, REGISTER_SUB (fr_convert_to_value (data[0]), fr_convert_to_value (data[1])));
-    }
+    void c_sub_pointer (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_SUB (fr_convert_to_value (data[0]), fr_convert_to_value (data[1]))); }
 
-    void c_mul_pointer (CmsData* data, int size)
-    {
-        fr_register_add (&register_list, REGISTER_MUL (fr_convert_to_value (data[0]), fr_convert_to_value (data[1])));
-    }
+    void c_mul_pointer (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_MUL (fr_convert_to_value (data[0]), fr_convert_to_value (data[1]))); }
 
-    void c_div_pointer (CmsData* data, int size)
-    {
-        fr_register_add (&register_list, REGISTER_DIV (fr_convert_to_value (data[0]), fr_convert_to_value (data[1])));
-    }
+    void c_div_pointer (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_DIV (fr_convert_to_value (data[0]), fr_convert_to_value (data[1]))); }
 
-    void c_print (CmsData* data, int size)
+    void do_list_statements (char* data, Register* (reg)(Value value))
     {
         char** args;
-
-        size_t length = frs_split (data[0], ',', &args);
+        size_t length = frs_split (data, ',', &args);
 
         for (size_t i = 0; i < length; ++ i)
-            fr_register_add (&register_list, REGISTER_OUT (fr_convert_to_value (args[i])));
+            fr_register_add (&register_list, reg (fr_convert_to_value (args[i])));
 
         free (args);
     }
 
-    void c_input (CmsData* data, int size)
-    {
-        char** args;
+    void c_print (CmsData* data, int size)   { do_list_statements (data[0], REGISTER_PRINT); }
 
-        size_t length = frs_split (data[0], ',', &args);
+    void c_flush (CmsData* data, int size)   { do_list_statements (data[0], REGISTER_FLUSH); }
 
-        for (size_t i = 0; i < length; ++ i)
-            fr_register_add (&register_list, REGISTER_CIN (fr_convert_to_value (args[i])));
+    void c_input (CmsData* data, int size)   { do_list_statements (data[0], REGISTER_READ); }
 
-        free (args);
-    }
+    void c_getchar (CmsData* data, int size) { do_list_statements (data[0], REGISTER_READ_CHAR); }
 
-    void c_getchar (CmsData* data, int size)
-    {
-        char** args;
-
-        size_t length = frs_split (data[0], ',', &args);
-
-        for (size_t i = 0; i < length; ++ i)
-            fr_register_add (&register_list, REGISTER_GCH (fr_convert_to_value (args[i])));
-
-        free (args);
-    }
-
-
-    void c_system (CmsData* data, int size)
-    {
-        char** args;
-
-        size_t length = frs_split (data[0], ',', &args);
-
-        for (size_t i = 0; i < length; ++ i)
-            fr_register_add (&register_list, REGISTER_SYS (fr_convert_to_value (args[i])));
-
-        free (args);
-    }
+    void c_system (CmsData* data, int size)  { do_list_statements (data[0], REGISTER_SYS); }
 
     void c_push (CmsData* data, int size)
     {
@@ -883,10 +811,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         register_list[y]->reg_values[0] = VALUE_INT (fr_get_current_register_position (&register_list));
     }
 
-    void c_function (CmsData* data, int size)
-    {
-        create_function (data[0], data[1], data[2], fr_convert_to_value);
-    }
+    void c_function (CmsData* data, int size) { create_function (data[0], data[1], data[2], fr_convert_to_value); }
 
     void c_function_short (CmsData* data, int size)
     {
@@ -894,10 +819,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         create_function (data[0], data[1], data[2], fr_convert_to_value);
     }
 
-    void c_call (CmsData* data, int size)
-    {
-        create_call_function (data[0], data[1], fr_convert_to_value);
-    }
+    void c_call (CmsData* data, int size) { create_call_function (data[0], data[1], fr_convert_to_value); }
 
     void c_return (CmsData* data, int size)
     {
@@ -963,8 +885,9 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         cms_add ("# = % ;",     c_set,     CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("O: % ;",      c_print,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("I: % ;",      c_input,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("O ( flush ): % ;",       c_flush,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("I ( single ) : % ;",     c_getchar, CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("S: % ;",      c_system,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("GC: % ;",     c_getchar, CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("PUSH: % ;",   c_push,    CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("POP: % ;",    c_pop,     CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("jump % ;",    c_jlabel,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);

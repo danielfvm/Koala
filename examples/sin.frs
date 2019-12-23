@@ -1,0 +1,35 @@
+inc "examples/std.frs";
+
+<* TODO PROBLEM: ´var´ is to small! *>
+
+factorial (n) {
+    var result = 1;
+    for (2, n, (i) { 
+        result *= i; 
+    });
+    ret result;
+}
+
+pow (x, y) {
+    var result = 1.0;
+    for (0, y - 1, (i) { 
+        result *= x; 
+    });
+    ret result;
+}
+
+sin (x, n) {
+    var result = x;
+
+    for (3, n, (i) { 
+        result += pow (x, i) / factorial (i); 
+    });
+
+    for (5, n, (i) {
+        result -= pow (x, i) / factorial (i);
+    });
+
+    ret result;
+}
+
+O: factorial(12), '\n';
