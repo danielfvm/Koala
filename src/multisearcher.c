@@ -258,13 +258,10 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                         text_char_i ++;
                     continue;
                 }
+
                 // If ´template_char´ is not equal ´text_char´ than the ´text´ is not equal to the given syntax
                 if (template_char != text_char)
-                {
-                    if (template_char == ';' && template_syntax_i == strlen (template_syntax) - 1)
-                        warning ("Symbol ´;´ might be missing in this statement!", NULL);
                     break;
-                }
 
                 // Update text index
                 text_char_i ++;

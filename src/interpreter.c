@@ -237,12 +237,13 @@ int fr_run (const Registry* register_list)
             }
             case ALLOC:
             {
-                if ((reg->reg_values[0].data_type == DT_STRING || fr_get_data_type (reg->reg_values[1]) == DT_STRING) && reg->reg_values[0].value)
-                    free (reg->reg_values[0].value);
+//                if ((reg->reg_values[0].data_type == DT_STRING || fr_get_data_type (reg->reg_values[1]) == DT_STRING) && reg->reg_values[0].value)
+//                    free (reg->reg_values[0].value);
                 if (fr_get_data_type (reg->reg_values[1]) == DT_STRING)
                 {
                     char* text = fr_get_memory_value (reg->reg_values[1]).value;
                     strcpy (reg->reg_values[0].value = malloc (strlen (text) + 1), text);
+//                    reg->reg_values[0].value[strlen (text)] = '\0';
                     reg->reg_values[0].data_type = DT_STRING;
                 }
                 else
@@ -287,7 +288,7 @@ int fr_run (const Registry* register_list)
                     }
                     else if (data_type == DT_CHAR)
                     {
-                        int  size = strlen (*m_value);
+                        int size = strlen (*m_value);
                         (*m_value) = realloc (*m_value, strlen (*m_value) + 2);
                         ((char*) *m_value)[size] = m_value_add;
                         ((char*) *m_value)[size + 1] = '\0';
@@ -320,8 +321,18 @@ int fr_run (const Registry* register_list)
                     }
                     continue;
                 }
-
-                if (register_list[m_value]->reg_values[0].data_type == DT_FLOAT && fr_get_data_type (reg->reg_values[1]) != DT_FLOAT)
+                else if (register_list[m_value]->reg_values[0].data_type == DT_CHAR && fr_get_data_type (reg->reg_values[1]) == DT_STRING)
+                {
+                    void** m_value = &register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].value;
+                    register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type = DT_STRING;
+                    int size = strlen ((char*)m_value_add);
+                    char c = (intptr_t)(*m_value);
+                    (*m_value) = (char*) malloc (size + 2);
+                    sprintf (*m_value, "%c%s", c, m_value_add);
+                    ((char*) *m_value)[size + 1] = '\0';
+                    continue;
+                }
+                else if (register_list[m_value]->reg_values[0].data_type == DT_FLOAT && fr_get_data_type (reg->reg_values[1]) != DT_FLOAT)
                     m_value_add *= FLOAT_CONV_VALUE;
                 else if (register_list[m_value]->reg_values[0].data_type != DT_FLOAT && fr_get_data_type (reg->reg_values[1]) == DT_FLOAT)
                     m_value_add /= FLOAT_CONV_VALUE;
@@ -509,6 +520,7 @@ int fr_run (const Registry* register_list)
                 else if (m_type == DT_INT)
                 {
                     scanf ("%d", m_value);
+                    printf ("%d\n", *m_value);
                     getchar();
                 }
                 else if (m_type == DT_CHAR)

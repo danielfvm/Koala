@@ -139,7 +139,6 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             goto var_get_pos_by_name_return;
         }
 
-
         return -1;
 
         var_get_pos_by_name_return: 
@@ -160,7 +159,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             error ("Variable ´%s´ cannot start with a number!", name);
 
         for (int i = variable_count - 1; i >= 0; -- i)
-            if (!strcmp ((*variables)[i].name, name) && !strcmp ((*variables)[i].function_path, path))
+            if (!strcmp ((*variables)[i].name, name) && !strcmp ((*variables)[i].function_path, path) && strcmp ((*variables)[i].name, "__origin__"))
                 error ("Variable ´%s´ already exists in this scope!", name);
 
         (*variables) = realloc (*variables, sizeof (Variable) * (variable_count + 1));
@@ -177,6 +176,9 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
         return m_index;
     }
+
+    // Remove new variable to list ´variables´
+    void var_rem () { (*variables) = realloc (*variables, sizeof (Variable) * (variable_count -= 1)); }
 
     size_t var_add (const char* name, const size_t m_index, const bool constant) { var_add_function_path (function_path, name, m_index, constant); }
 
@@ -316,6 +318,16 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         return POINTER (m_tmp_var);
     }
 
+    bool is_illegal_name (const char* name)
+    {
+        return !strcmp (name, "var") 
+            || !strcmp (name, "val") 
+            || !strcmp (name, "ret") 
+            || !strcmp (name, "push") 
+            || !strcmp (name, "pop") 
+            || !strcmp (name, "inc");
+    }
+
     Value create_function (char* func_name, char* func_args, char* func_code, Value (fr_convert_to_value) (char* text))
     {
         char** args;
@@ -330,6 +342,12 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         // Add to function_path
         if (func_name != NULL)
         {
+            for (int i = variable_count - 1; i >= 0; -- i)
+                if (!strcmp ((*variables)[i].name, func_name) && !strcmp ((*variables)[i].function_path, function_path))
+                    error ("Function or Variable ´%s´ already exists in this scope!", func_name);
+            if (is_illegal_name (func_name))
+                error ("Function ´%s´ cannot be called like that!", func_name);
+
             strcat (function_path = realloc (function_path, strlen (function_path) + strlen (func_name) + 2), ".");
             strcat (function_path, func_name);
         }
@@ -490,6 +508,30 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             fr_register_add (&register_list, (text[is_smaller] == '=' ? REGISTER_SEQ : REGISTER_SMA) (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
             return POINTER (m_index);
         }
+        else if (is_equal && text[is_equal - 2] == '+')
+        {
+            strcpy (v1_text = malloc (is_equal - 1), text);
+            v1_text[is_equal - 2] = '\0';
+            strcpy (v2_text = malloc (strlen (text) - is_equal), text + is_equal + 1);
+
+            size_t m_index = var_get_pos_by_name (v1_text, true); 
+
+            fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), fr_convert_to_value (v2_text)));
+
+            return POINTER (m_index);
+        }
+        else if (is_equal && text[is_equal - 2] == '-')
+        {
+            strcpy (v1_text = malloc (is_equal - 1), text);
+            v1_text[is_equal - 2] = '\0';
+            strcpy (v2_text = malloc (strlen (text) - is_equal), text + is_equal + 1);
+
+            size_t m_index = var_get_pos_by_name (v1_text, true); 
+
+            fr_register_add (&register_list, REGISTER_SUB (VALUE_INT (m_index), fr_convert_to_value (v2_text)));
+
+            return POINTER (m_index);
+        }
         else if (is_equal && (text[is_equal] == '=' || text[(is_equal -= 1) - 1] == '!'))
         {
             strcpy (v1_text = malloc (is_equal), text);
@@ -521,14 +563,21 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             if ((text[i] == '-' || text[i] == '+') && i == 0) // skip if first char is + or -
                 continue;
 
-            if (text[i] < '0' || text[i] > '9')
-                var_is_number = false;
-            if ((text[i] < '0' || text[i] > '9') && text[i] != '.')
+            if (text[i] == 'i' && text[i + 1] == '\0' && i != 0)
                 var_is_float = false;
+            else if (text[i] == 'l' && text[i + 1] == '\0' && i != 0)
+                var_is_number = false;
+            else 
+            {
+                if ((text[i] < '0' || text[i] > '9') && text[i] != '.')
+                    var_is_float = false;
+                if (text[i] < '0' || text[i] > '9')
+                    var_is_number = false;
+            }
         }
 
         // ´text´ is ´int´
-        if (var_is_number || (text[strlen (text) - 1] == 'i' && text[1] != '\0'))
+        if (var_is_number)
             return VALUE_INT (atoi (text));
         else if (text[0] == '0' && text[1] == 'x')
             return VALUE_INT (strtol (text, NULL, 16));
@@ -536,7 +585,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             return VALUE_INT (strtol (text + 1, NULL, 16));
 
         // ´text´ is ´float´
-        if (var_is_float || (text[strlen (text) - 1] == 'l' && text[1] != '\0'))
+        if (var_is_float)
             return VALUE_FLOAT (atof (text));
 
         // calculation
@@ -658,9 +707,13 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
                 args[i][equal_pos - 1] = '\0';
                 m_value = fr_convert_to_value (args[i] + equal_pos); // - 1
                 frs_trim (&args[i]);
+                if (is_illegal_name (args[i]))
+                    error ("Variable ´%s´ cannot be called like that!", args[i]);
                 var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (m_value)), constant);
                 continue;
             }
+            if (is_illegal_name (args[i]))
+                error ("Variable ´%s´ cannot be called like that!", args[i]);
             var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))), constant);
         }
     }
@@ -756,7 +809,6 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         sprintf (data[1] = realloc (data[1], strlen (data[1]) + 2), "%s;", data[1]);
         c_check (data, size);
     }
-
 
     void c_ncheck (CmsData* data, int size)
     {
@@ -880,15 +932,14 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         fr_compile (frs_read_file (data[0]), variables, &variable_count, false);
     }
 
-    // Check if c_check_else & c_check can be replaced with c_bracket...
+    // var & val getting recocnised even if char is with out space next to it!
     cms_create ( &cms_template, CMS_LIST ( {
+        cms_add ("ret % ;",                c_return,            CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("{ % }",                  c_scope,             CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) { % }",          c_function,          CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) > % ;",          c_function_short,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) ;",              c_call,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) ( % ) ;",          c_call,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("var % ;",     c_alloc,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("val % ;",     c_alloc_const,     CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("~ # += % ;",  c_add_pointer,     CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("~ # -= % ;",  c_sub_pointer,     CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("~ # *= % ;",  c_mul_pointer,     CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
@@ -901,7 +952,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         cms_add ("# = % ;",     c_set,     CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("O: % ;",      c_print,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("I: % ;",      c_input,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("O ( flush ): % ;",       c_flush,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("O ( flush ) : % ;",       c_flush,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("I ( single ) : % ;",     c_getchar, CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("S: % ;",      c_system,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("PUSH: % ;",   c_push,    CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
@@ -928,8 +979,9 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         cms_add ("# -> { % }",          c_loop,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) -> % ;",        c_loop_short,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# -> % ;",            c_loop_short,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("ret % ;",             c_return,       CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("inc % ;",             c_include,      CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("var % ;",     c_alloc,        CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("val % ;",     c_alloc_const,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
     } ));
 
    
@@ -944,5 +996,6 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
     else
         (*pre_variable_count) = variable_count;
 
+//    (*pre_variable_count) = variable_count;
     return EXIT_SUCCESS;
 }

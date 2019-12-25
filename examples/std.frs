@@ -40,6 +40,15 @@
         }
     }
 
+    <* STD - For loop *>
+    forEdit (min = INT, max = INT, value = INT, lambda = (x) { O: x, '\n'; }) {
+        (min <= max) -> {
+            lambda (min, &value);
+            min += 1;
+        }
+        ret value;
+    }
+
     <* STD - exit *>
     exit (status = INT) {
         O: "\nExit status: $status\n";
@@ -47,10 +56,24 @@
     }
 
     <* STD - line length *>
-    len (text, size = 0) {
+    len (text = STR, size = 0) {
         (text[size]) -> size += 1;
         ret size;
     }
+
+    error (msg, status = 1) {
+        O: "(Std-Runtime-Error)>> ", msg, '\n';
+        exit (status);
+    }
+
+    <* STD - substr *>
+    substr (text = STR, begin = INT, end = INT) > ret forEdit (begin, end < 0 ? len (text) + end : end - 1, "", (i, subtext) {
+        (len (text) <= i) > error ("´substr´ index out of bounds!");
+        ~subtext += text[i];
+    });
+
+    <* STD - mkdir *>
+    mkdir (file = STR) > S: "mkdir $file";
 
     <* STD - abs make negative numbers positive *>
     abs (x) > ret x < 0 ? x * (-1) : x;
@@ -64,4 +87,48 @@
     <* STD - cast to string *>
     str (x) > ret STR + x;
 
+    <* STD - toHex *>
+    toHex (value = INT, base = 16, size = 5, text = STR) {
+        value -> {
+            val type = value % base;
+            text = char(type < 10 ? '0' + type : 'A' + type - 10) + text;
+            value /= base;
+        }
+        ret ('0' * (size - len (text))) + text; 
+    }
+
+    high (value, base = 10) > ret forEdit (1, value, 1, (i, num) {
+        ~num *= base;
+    });
+
+    toNum (value, base = 16) > ret forEdit (0, len (value) - 1, 0, (i, num) {
+        ~num += high (len (value) - i - 1, base) * int (value[i] >= 'A' ? value[i] - 'A' + 10 : value[i] - '0');
+    });
+
 <* END - Koala's Standart Library *>
+
+
+
+<* Test Vector Library *>
+<*
+create () {
+    ret "";
+}
+
+size (vector, size = 0) {
+    (vector[size]) -> size += 1;
+    ret size;
+}
+
+add (vector, value) {
+    ~vector += toHex(value, 8);
+}
+
+get (vector, pos) {
+    (pos >= size (vector)) {
+        O: "Array out of bounds!\n";
+        ret 0;
+    } {
+        ret ~(toNum(substr(vector, pos * 8, pos * 8 + 8)));
+    }
+}*>

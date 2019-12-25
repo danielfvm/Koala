@@ -1,40 +1,5 @@
 inc "examples/std.frs";
 
-<* PRIME NUMBER PROGRAM *>
-<*
-isPrime (x) {
-    (x < 2) > ret false;
+var text = "Hallo Welt!";
 
-    var j = 2;
-    (j < x) -> {
-        !(x % j) > ret false;
-        j += 1;
-    }
-
-    ret true;
-}
-*>
-
-<* CMS cannot find ret *>
-<*
-    get () {
-        ret (i) {
-            (isPrime (i)) > O: i, '\n';
-        };
-    }
-    var y = get ();
-
-    for (0, 100, y);
-*>
-
-<* Count Ascii program *>
-var text = "";
-I: &text;
-
-for ('A', 'z', (i) {
-    var found = 0;
-    for (0, len (text) - 1, (c) {
-        (char (i) == text[c]) > found += 1;
-    });
-    found > O: char (i), ": ", found, '\n';
-});
+O: substr (text, 0, 30), '\n';
