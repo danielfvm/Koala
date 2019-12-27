@@ -8,12 +8,12 @@ typedef void (*CmsCallback) (CmsData* data, int size);
 
 enum CmsOption
 {
-    CMS_NONE,                           // None option selected
-    CMS_IGNORE_UPPER_LOWER_CASE,        // Ignores if char is upper or down case
-    CMS_IGNORE_SPACING_LENGTH,          // Ignores if there are multiple spaces instead of the given spaces in template
-    CMS_IGNORE_SPACING,                 // Ignores if there are spaces between text
-    CMS_USE_BRACKET_SEARCH_ALGORITHM,   // Ignores if there are spaces between text
-    CMS_IGNORE_STRING
+    CMS_NONE = 0x000,                           // None option selected
+    CMS_IGNORE_UPPER_LOWER_CASE = 0x001,        // Ignores if char is upper or down case
+    CMS_IGNORE_SPACING_LENGTH = 0x002,          // Ignores if there are multiple spaces instead of the given spaces in template
+    CMS_IGNORE_SPACING = 0x004,                 // Ignores if there are spaces between text
+    CMS_USE_BRACKET_SEARCH_ALGORITHM = 0x008,   // Ignores if there are spaces between text
+    CMS_IGNORE_STRING = 0x010
 };
 
 
@@ -21,7 +21,7 @@ typedef struct
 {
     CmsCallback callback;
     int         data_size;
-    int         options;
+    size_t      options;
     char*       syntax;
 } CmsSearch;
 

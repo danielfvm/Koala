@@ -1,10 +1,10 @@
 <* FUN with Pattern *>
 
-inc "std.frs";
+inc "examples/std.frs";
 
 for (read (), read (), (i) { 
-    for (0, 9, (j) { 
-        O: "$i$j\t";
+    for (1, 10, (j) { 
+        O: "${i*j}\t";
     });
     O: "\n";
 });

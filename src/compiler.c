@@ -672,7 +672,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         size_t bracket_index_close;
 
         // returns value/pointer using index of string -> ´char´
-        if ((bracket_index_open = frs_contains (text, '[')) != -1 && (bracket_index_close = frs_find_next_bracket (bracket_index_open - 1, text)) != -1)
+        if ((bracket_index_open = frs_contains (text, '[')) != 0 && (bracket_index_close = frs_find_next_bracket (bracket_index_open - 1, text)) != -1)
         {
             char old_char = text[bracket_index_open - 1] = '\0';
             if ((var_position = var_get_pos_by_name (text, false)) == -1)
@@ -806,7 +806,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
     void c_check_short (CmsData* data, int size)
     {
-        sprintf (data[1] = realloc (data[1], strlen (data[1]) + 2), "%s;", data[1]);
+        strcat (data[1] = realloc (data[1], strlen (data[1]) + 2), ";");
         c_check (data, size);
     }
 
@@ -822,7 +822,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
     void c_ncheck_short (CmsData* data, int size)
     {
-        sprintf (data[1] = realloc (data[1], strlen (data[1]) + 2), "%s;", data[1]);
+        strcat (data[1] = realloc (data[1], strlen (data[1]) + 2), ";");
         c_ncheck (data, size);
     }
 
@@ -841,7 +841,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
     void c_loop_short (CmsData* data, int size)
     {
-        sprintf (data[1] = realloc (data[1], strlen (data[1]) + 2), "%s;", data[1]);
+        strcat (data[1] = realloc (data[1], strlen (data[1]) + 2), ";");
         c_loop (data, size);
     }
 
@@ -883,8 +883,16 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
     void c_function_short (CmsData* data, int size)
     {
-        sprintf (data[2] = realloc (data[2], strlen (data[2]) + 2), "%s;", data[2]);
+        strcat (data[2] = realloc (data[2], strlen (data[2]) + 2), ";");
         create_function (data[0], data[1], data[2], fr_convert_to_value);
+    }
+
+    void c_function_ret (CmsData* data, int size)
+    {
+        char* f_code = malloc (4 + strlen (data[2]) + 1 + 1);
+        sprintf (f_code, "ret %s;", data[2]);
+        create_function (data[0], data[1], f_code, fr_convert_to_value);
+        free (f_code);
     }
 
     void c_call (CmsData* data, int size) { create_call_function (data[0], data[1], fr_convert_to_value); }
@@ -893,7 +901,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
     {
         if (in_function > 0) // function
         {
-            fr_register_add (&register_list, REGISTER_SET (VALUE_INT (in_function + 2), fr_convert_to_value (data[0])));
+            if (size > 0) fr_register_add (&register_list, REGISTER_SET (VALUE_INT (in_function + 2), fr_convert_to_value (data[0])));
             fr_register_add (&register_list, REGISTER_JUMP (POINTER (in_function - 1)));
         }
         else if (in_function == 0) // main
@@ -904,7 +912,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         {
             if (scope_jump_back_size >= 100)
                 error ("Maximum ´ret´ amount in ´scope´ of 100 has been reached!", NULL);
-            fr_register_add (&register_list, REGISTER_SET (VALUE_INT (abs(in_function)), fr_convert_to_value (data[0])));
+            if (size > 0) fr_register_add (&register_list, REGISTER_SET (VALUE_INT (abs(in_function)), fr_convert_to_value (data[0])));
             scope_jump_back[scope_jump_back_size ++] = fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (-1)));
         }
     }
@@ -934,10 +942,15 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
     // var & val getting recocnised even if char is with out space next to it!
     cms_create ( &cms_template, CMS_LIST ( {
-        cms_add ("ret % ;",                c_return,            CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("inc %;",     c_include,      CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING_LENGTH | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("var %;",     c_alloc,        CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING_LENGTH | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("val %;",     c_alloc_const,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING_LENGTH | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("ret %;",     c_return,       CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING_LENGTH | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("ret ;",      c_return,       CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING        | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("{ % }",                  c_scope,             CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) { % }",          c_function,          CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) > % ;",          c_function_short,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# ( % ) < % ;",          c_function_ret,      CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) ;",              c_call,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) ( % ) ;",          c_call,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("~ # += % ;",  c_add_pointer,     CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
@@ -979,9 +992,6 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         cms_add ("# -> { % }",          c_loop,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) -> % ;",        c_loop_short,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# -> % ;",            c_loop_short,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("inc % ;",             c_include,      CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("var % ;",     c_alloc,        CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("val % ;",     c_alloc_const,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
     } ));
 
    

@@ -1,5 +1,14 @@
+<* Function's parameters aren't beeing reseted! *>
 inc "examples/std.frs";
 
-var text = "Hallo Welt!";
+hello_world1 () {
+    ret "Hello World";
+}
 
-O: substr (text, 0, 30), '\n';
+hello_world2 () > ret "Hello World";
+
+hello_world3 () < "Hello World";
+
+O: hello_world1 (), '\n';
+O: hello_world2 (), '\n';
+O: hello_world3 (), '\n';

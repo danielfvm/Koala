@@ -26,7 +26,7 @@ hello () {
 
 world () {
     O: "Hello ";
-    var old_origin  = world.__origin__;
+    val old_origin  = world.__origin__;
     world.__origin__ = hello;
     hello.__origin__ = old_origin;
 }

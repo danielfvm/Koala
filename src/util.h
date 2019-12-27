@@ -4,6 +4,7 @@
 
 #define true  1
 #define false 0
+#define NOT_FOUND -1
 
 bool   frs_has_illigal_ascii (const char* text);
 

@@ -5,9 +5,6 @@
     <* make index in interpreter *>
 <* END - FOUND BUGS *>
 
-<* Example program *>
-
-
 <* START - Koala's Standart Library *>
     <* STD - DataTypes *>
     val STR   = "";
@@ -24,7 +21,10 @@
     }
 
     <* STD - Print Methode *>
-    print (x) > O: x, '\n';
+    print (x) {
+        O: x, '\n';
+        ret x;
+    }
 
     <* STD - Sleep Methode, working on Linux/BSD/Unix/OSX *>
     sleep (x = FLOAT) > S: "sleep $x";
@@ -41,7 +41,7 @@
     }
 
     <* STD - For loop *>
-    forEdit (min = INT, max = INT, value = INT, lambda = (x) { O: x, '\n'; }) {
+    forEdit (min = INT, max = INT, value = INT, lambda = (x, w) { O: x, ' ', w, '\n'; }) {
         (min <= max) -> {
             lambda (min, &value);
             min += 1;
@@ -67,7 +67,7 @@
     }
 
     <* STD - substr *>
-    substr (text = STR, begin = INT, end = INT) > ret forEdit (begin, end < 0 ? len (text) + end : end - 1, "", (i, subtext) {
+    substr (text = STR, begin = INT, end = INT) < forEdit (begin, end < 0 ? len (text) + end : end - 1, "", (i, subtext) {
         (len (text) <= i) > error ("´substr´ index out of bounds!");
         ~subtext += text[i];
     });
@@ -76,16 +76,16 @@
     mkdir (file = STR) > S: "mkdir $file";
 
     <* STD - abs make negative numbers positive *>
-    abs (x) > ret x < 0 ? x * (-1) : x;
+    abs (x) < x < 0 ? x * (-1) : x;
 
     <* STD - cast to char *>
-    char (x) > ret CHAR + x;
+    char (x) < CHAR + x;
 
     <* STD - cast to int *>
-    int (x) > ret INT + x;
+    int (x) < INT + x;
 
     <* STD - cast to string *>
-    str (x) > ret STR + x;
+    str (x) < STR + x;
 
     <* STD - toHex *>
     toHex (value = INT, base = 16, size = 5, text = STR) {
@@ -97,11 +97,11 @@
         ret ('0' * (size - len (text))) + text; 
     }
 
-    high (value, base = 10) > ret forEdit (1, value, 1, (i, num) {
+    high (value, base = 10) < forEdit (1, value, 1, (i, num) {
         ~num *= base;
     });
 
-    toNum (value, base = 16) > ret forEdit (0, len (value) - 1, 0, (i, num) {
+    toNum (value, base = 16) < forEdit (0, len (value) - 1, 0, (i, num) {
         ~num += high (len (value) - i - 1, base) * int (value[i] >= 'A' ? value[i] - 'A' + 10 : value[i] - '0');
     });
 

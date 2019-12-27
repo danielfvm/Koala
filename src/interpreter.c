@@ -237,17 +237,18 @@ int fr_run (const Registry* register_list)
             }
             case ALLOC:
             {
-//                if ((reg->reg_values[0].data_type == DT_STRING || fr_get_data_type (reg->reg_values[1]) == DT_STRING) && reg->reg_values[0].value)
-//                    free (reg->reg_values[0].value);
                 if (fr_get_data_type (reg->reg_values[1]) == DT_STRING)
                 {
-                    char* text = fr_get_memory_value (reg->reg_values[1]).value;
-                    strcpy (reg->reg_values[0].value = malloc (strlen (text) + 1), text);
-//                    reg->reg_values[0].value[strlen (text)] = '\0';
+                    size_t text_size = strlen (fr_get_memory (reg->reg_values[1])) + 1;
+                    void** ref_value = &reg->reg_values[0].value;
+                    *ref_value = (*ref_value != NULL) ? realloc (*ref_value, text_size) : malloc (text_size);
+                    strcpy (reg->reg_values[0].value, fr_get_memory (reg->reg_values[1]));
                     reg->reg_values[0].data_type = DT_STRING;
                 }
                 else
+                {
                     reg->reg_values[0] = fr_get_memory_value (reg->reg_values[1]);
+                }
                 continue;
             }
             case IND:

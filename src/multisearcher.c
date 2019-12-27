@@ -232,11 +232,13 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                     text_char_i = new_text_char_i;
 
                     // If ´CMS_IGNORE_SPACING_LENGTH´ is activated, then the next char must be a spacing
+                    /*
                     if ( CMS_CHECK (template_options, CMS_IGNORE_SPACING_LENGTH) &&
                         !CMS_CHECK (template_options, CMS_IGNORE_SPACING)        &&
                          template_syntax[template_syntax_i + 1] <= ' '           &&
                          template_char == '%')
                             text_char_i --;
+                    */
 
                     // Copy ´data_str´ to data array
                     data[data_i] = malloc (strlen (data_str) + 1);
@@ -246,13 +248,13 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                     continue;
                 }
 
-                if (CMS_CHECK (template_options, CMS_IGNORE_SPACING_LENGTH) && text[text_char_i] == ' ' && template_char == ' ')
+                if (CMS_CHECK (template_options, CMS_IGNORE_SPACING_LENGTH) && text[text_char_i] <= ' ' && template_char <= ' ')
                 {
                     while (text[text_char_i] <= ' ' && text[text_char_i] != template_syntax[template_syntax_i + 1])
                         text_char_i ++;
                     continue;
                 }
-                else if (CMS_CHECK (template_options, CMS_IGNORE_SPACING) && template_char == ' ')
+                else if (CMS_CHECK (template_options, CMS_IGNORE_SPACING) && template_char <= ' ')
                 {
                     while (text[text_char_i] <= ' ' && text[text_char_i] != template_syntax[template_syntax_i + 1])
                         text_char_i ++;
