@@ -1,4 +1,5 @@
 #include "interpreter.h"
+#include "util.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -98,7 +99,9 @@ Register* CREATE_REGISTER_3 (byte type, Value one, Value two, Value three)
     return reg;
 }
 
-Register* REGISTER_ALLOC (Value m_value) { return CREATE_REGISTER_2 (ALLOC, VALUE_NULL (), m_value); }
+Register* REGISTER_ALLOC (Value m_value) { return CREATE_REGISTER_3 (ALLOC, VALUE_NULL (), m_value, VALUE_INT (0)); }
+
+Register* REGISTER_SALLOC (Value m_value) { return CREATE_REGISTER_3 (SALLOC, VALUE_NULL (), m_value, VALUE_INT (0)); }
 
 Register* REGISTER_ADD (Value m_index, Value m_add) { return CREATE_REGISTER_2 (ADD, m_index, m_add); }
 
@@ -235,8 +238,16 @@ int fr_run (const Registry* register_list)
                 register_list[(intptr_t)fr_get_memory (reg->reg_values[0])]->reg_values[0] = stack[stack_size];
                 continue;
             }
-            case ALLOC:
+            case SALLOC:
             {
+                if (reg->reg_values[2].value) // do not ALLOC if SET was called on this memory!
+                {
+                    reg->reg_values[2].value = false; // reset SALLOC
+                    continue;
+                }
+
+                case ALLOC:
+
                 if (fr_get_data_type (reg->reg_values[1]) == DT_STRING)
                 {
                     size_t text_size = strlen (fr_get_memory (reg->reg_values[1])) + 1;
@@ -261,6 +272,7 @@ int fr_run (const Registry* register_list)
             {
                 fr_set_memory    (reg->reg_values[0], fr_get_memory (reg->reg_values[1]));
                 fr_set_data_type (reg->reg_values[0], fr_get_data_type (reg->reg_values[1]));
+                register_list[(intptr_t)reg->reg_values[0].value]->reg_values[2].value = (void*)(intptr_t)true; // used in SALLOC
                 continue;
             }
             case NEG:
@@ -521,7 +533,6 @@ int fr_run (const Registry* register_list)
                 else if (m_type == DT_INT)
                 {
                     scanf ("%d", m_value);
-                    printf ("%d\n", *m_value);
                     getchar();
                 }
                 else if (m_type == DT_CHAR)

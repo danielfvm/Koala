@@ -11,6 +11,7 @@ enum Execution
 {
     NONE,
     ALLOC,
+    SALLOC,
     PRINT,
     READ,
     EQ,
@@ -102,6 +103,8 @@ Value VALUE_VALUE (Value value);
 
 
 Register* REGISTER_ALLOC (Value m_value);
+
+Register* REGISTER_SALLOC (Value m_value);
 
 Register* REGISTER_ADD (Value m_index, Value m_add);
 

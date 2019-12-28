@@ -770,29 +770,9 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
     void c_system (CmsData* data, int size)  { do_list_statements (data[0], REGISTER_SYS); }
 
-    void c_push (CmsData* data, int size)
-    {
-        char** args;
+    void c_push (CmsData* data, int size) { do_list_statements (data[0], REGISTER_PUSH); }
 
-        size_t length = frs_split (data[0], ',', &args);
-
-        for (size_t i = 0; i < length; ++ i)
-            fr_register_add (&register_list, REGISTER_PUSH (fr_convert_to_value (args[i])));
-
-        free (args);
-    }
-
-    void c_pop (CmsData* data, int size)
-    {
-        char** args;
-
-        size_t length = frs_split (data[0], ',', &args);
-
-        for (size_t i = 0; i < length; ++ i)
-            fr_register_add (&register_list, REGISTER_POP (fr_convert_to_value (args[i])));
-
-        free (args);
-    }
+    void c_pop (CmsData* data, int size) { do_list_statements (data[0], REGISTER_POP); }
 
     void c_check (CmsData* data, int size)
     {
@@ -965,7 +945,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         cms_add ("# = % ;",     c_set,     CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("O: % ;",      c_print,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("I: % ;",      c_input,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
-        cms_add ("O ( flush ) : % ;",       c_flush,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("O ( flush ) : % ;",      c_flush,   CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("I ( single ) : % ;",     c_getchar, CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("S: % ;",      c_system,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("PUSH: % ;",   c_push,    CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
