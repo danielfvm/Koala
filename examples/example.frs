@@ -1,14 +1,29 @@
-<* Function's parameters aren't beeing reseted! *>
 inc "examples/std.frs";
 
-hello_world1 () {
-    ret "Hello World";
+flip (text) < forEdit (len (text) - 1, 0, STR, (i, edit_text) {
+    ~edit_text += text[i];
+});
+
+nextASCII (text) < forEdit (0, len (text) - 1, STR, (i, edit_text) {
+    ~edit_text += text[i] + 1;
+});
+
+countWords (text) < forEdit (0, len (text) - 1, INT, (i, counter) {
+    (text[i] <= ' ' & text[i + 1] > ' ') > ~counter += 1;
+    (text[i] > ' ' & i == 0) > ~counter += 1;
+});
+
+strToBase (text, base) < forEdit (0, len (text) - 1, STR, (i, edit_text) {
+    ~edit_text += toBase (int (text[i]), base, base == 16 ? 2 : (base == 8 ? 3 : 8));
+});
+
+baseToStr (text, base) { 
+    val st = base == 16 ? 2 : (base == 8 ? 3 : 8);
+    ret forEdit (0, len (text) / st - 1, STR, (i, edit_text) {
+        ~edit_text += char (toNum (substr (text, i * st, i * st + st), base));
+    });
 }
 
-hello_world2 () > ret "Hello World";
-
-hello_world3 () < "Hello World";
-
-O: hello_world1 (), '\n';
-O: hello_world2 (), '\n';
-O: hello_world3 (), '\n';
+<*
+O: strToBase (read (STR), read (INT)), '\n';
+*>

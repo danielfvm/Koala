@@ -1,8 +1,20 @@
 <* FUN with pointers *>
+
+<* including std -> print *>
 inc "examples/std.frs";
 
-var a = 5, b = 10, c = 15;
+<* We define a, b and c with there own value 5, 10 and 15 *>
+val a = 5, b = 10, c = 15;
 
+
+<* Just prints value of ´a´ *>
 print (a);
-print (~(&a + 1));
-print (~(&a + 2));
+
+<*
+  With ´$´ we get the register index (which is also the memory position)
+  of our variable, in this case ´a´. By adding 1/2 to our register index
+  and then using ´~´ to get the value of the register, we get the value
+  of ´a´ & ´b´
+*>
+print (~($a + 1));
+print (~($a + 2));

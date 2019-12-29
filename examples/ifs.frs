@@ -1,0 +1,93 @@
+<*
+  For this example, please write 0 or 1 as input!
+*>
+
+inc "examples/std.frs";
+
+<* Simple input *>
+var x;
+I: $x;
+
+<* if user didn't wrote 0 or 1 it will be conv to 0 or 1 *>
+x = (x != false);
+
+
+
+
+
+<* Using ´short if´ & ´scope´*>
+val _ = x ? { O: "Y\n"; } : { O: "N\n"; };
+
+<* Using ´inside if´ *>
+O: x ? 'Y' : 'N', '\n';
+
+<* Using ´if´ *>
+x {
+    O: "Y\n";
+} {
+    O: "N\n";
+}
+
+<* Using ´short if´ *>
+x  > O: "Y\n";
+!x > O: "N\n";
+
+<* Using ´function´ *>
+test (x) {
+    !x > ret 1;
+    O: "Y\n";
+}
+(test(x)) > O: "N\n";
+
+
+<* Using ´scope´ *>
+({
+    !x > ret 1;
+    O: "Y\n";
+}) > O: "N\n";
+
+<* Using ´jump´ *>
+label:
+    jump label + x * 4 + 7;
+    O: "N\n";
+jump label + 4;
+O: "Y\n";
+
+<* Using ´math´ *>
+O: 'N' + x * (int('Y')-int('N')), '\n';
+
+<* Using ´selective function´ (isn't a real thing) *>
+yes() > O: "Y\n";
+no()  > O: "N\n";
+(x ? yes : no) ();
+
+
+<* Using ´selective lambda function´ (isn't a real thing) *>
+(x ? () { O: "Y\n"; }: () { O: "N\n"; }) ();
+
+<* Using ´string insert´ *>
+O: "${x ? 'Y' : 'N'}\n";
+
+<* Using ´string code insert´ *>
+O: "${{
+    x  > ret 'Y';
+    !x > ret 'N';
+}}\n";
+
+<* Using ´scope´ as if *>
+{
+    x > ret;
+    O: "N\n";
+}
+{
+    !x > ret;
+    O: "Y\n";
+}
+
+<* Using ´substr´ *>
+O: substr ("NY", x, x + 1), '\n';
+
+<* Using ´reg_pos´ *>
+var a = "N", b = "Y";
+O: ~($a + x), '\n';
+

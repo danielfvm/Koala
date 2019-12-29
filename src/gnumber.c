@@ -55,12 +55,13 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
     size_t last_i   = 0;
     size_t i, j;
 
-    char*  value;
+    char* value;
 
-    bool in_string = 0;
-    bool in_char   = 0;
-    int  in_brackets_round = 0;
-    int  in_brackets = 0;
+    bool in_string = false;
+    bool in_char   = false;
+    int  in_parentheses_brackets  = 0;
+    int  in_square_brackets = 0;
+    int  in_curly_brackets = 0;
 
     // Find maximum element count by searching after computes 
     for (i = 0, *size = 1; i < strlen (calc); ++ i)
@@ -76,27 +77,30 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
             in_char = !in_char;
 
         if (!in_char && !in_string && calc[i] == '{')
-            in_brackets ++;
-
+            in_curly_brackets ++;
         if (!in_char && !in_string && calc[i] == '}')
-            in_brackets --;
+            in_curly_brackets --;
 
         if (!in_char && !in_string && calc[i] == '(')
-            in_brackets_round ++;
-
+            in_parentheses_brackets ++;
         if (!in_char && !in_string && calc[i] == ')')
-            in_brackets_round --;
+            in_parentheses_brackets --;
 
-        if (!in_string && !in_char && !in_brackets && !in_brackets_round && (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/' || calc[i] == '%'))
+        if (!in_char && !in_string && calc[i] == '[')
+            in_square_brackets ++;
+        if (!in_char && !in_string && calc[i] == ']')
+            in_square_brackets --;
+
+        if (!in_string && !in_char && !in_curly_brackets && !in_parentheses_brackets && !in_square_brackets && (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/' || calc[i] == '%'))
             *size += 2;
     }
 
     // Allocate memory to array containing values
     (*array) = malloc (sizeof (Value) * (*size));
 
-    in_string = 0;
-    in_char   = 0;
-    in_brackets = 0;
+    in_string = false;
+    in_char   = false;
+    in_curly_brackets = 0;
 
     for (i = 0; i < calc_len; ++ i)
     {
@@ -111,22 +115,25 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
             in_char = !in_char;
 
         if (!in_char && !in_string && calc[i] == '{')
-            in_brackets ++;
-
+            in_curly_brackets ++;
         if (!in_char && !in_string && calc[i] == '}')
-            in_brackets --;
+            in_curly_brackets --;
 
         if (!in_char && !in_string && calc[i] == '(')
-            in_brackets_round ++;
-
+            in_parentheses_brackets ++;
         if (!in_char && !in_string && calc[i] == ')')
-            in_brackets_round --;
+            in_parentheses_brackets --;
+
+        if (!in_char && !in_string && calc[i] == '[')
+            in_square_brackets ++;
+        if (!in_char && !in_string && calc[i] == ']')
+            in_square_brackets --;
 
         // Skips at beginning & if it is not a compute
         if ((calc[i] != '+' && calc[i] != '-' && calc[i] != '*' && calc[i] != '/' && calc[i] != '%') || i == 0)
             continue;
 
-        if (in_string || in_char || in_brackets || in_brackets_round)
+        if (in_string || in_char || in_curly_brackets || in_parentheses_brackets || in_square_brackets)
             continue;
 
         value = frs_substr (calc, last_i, i);
@@ -157,7 +164,7 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
     // Converts cstring to an float array
     _gna_conv_to_registry_calculation (&array, calc, &size, fr_convert_to_value);
 
-    bool has_found_term = 0;
+    bool has_found_term = false;
     int  alloc_value    = 0;
 
     /** Starts calculation with mul & div **/
@@ -167,7 +174,7 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
 
         if (compute != '*' && compute != '/' && compute != '%')
         {
-            has_found_term = 0;
+            has_found_term = false;
             continue;
         }
 
@@ -175,7 +182,7 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
         {
             alloc_value = fr_register_add (register_list, REGISTER_ALLOC (array[i - 1]));
             array[i - 1] = POINTER (alloc_value);
-            has_found_term = 1;
+            has_found_term = true;
         }
 
         // Calculating mul or div depending on compute
@@ -206,6 +213,174 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
             fr_register_add (register_list, REGISTER_ADD (VALUE_INT (m_pos), array[i + 1]));
         else
             fr_register_add (register_list, REGISTER_SUB (VALUE_INT (m_pos), array[i + 1]));
+    }
+
+    free (array);
+
+    return POINTER (m_pos);
+}
+
+void _gna_conv_to_registry_boolean_algebra (Value** array, const char* calc, size_t* size, Value (*fr_convert_to_value) (char*))
+{
+    size_t calc_len = strlen(calc);
+    size_t array_i  = 0;
+    size_t last_i   = 0;
+    size_t i, j;
+
+    bool in_string = false;
+    bool in_char   = false;
+    int  in_parentheses_brackets = 0;
+    int  in_square_brackets = 0;
+    int  in_curly_brackets = 0;
+
+    // Find maximum element count by searching after computes 
+    for (i = 0, *size = 1; i < strlen (calc); ++ i)
+    {
+        // continue if double '\'
+        if (calc[i] == '\\' && i >= 1 && calc[i-1] == '\\' && ++ i)
+            continue;
+
+        if (!in_char && calc[i] == '"' && (i == 0 || calc[i-1] != '\\'))
+            in_string = !in_string;
+
+        if (!in_string && calc[i] == '\'' && (i == 0 || calc[i-1] != '\\'))
+            in_char = !in_char;
+
+        if (!in_char && !in_string && calc[i] == '{')
+            in_curly_brackets ++;
+        if (!in_char && !in_string && calc[i] == '}')
+            in_curly_brackets --;
+
+        if (!in_char && !in_string && calc[i] == '(')
+            in_parentheses_brackets ++;
+        if (!in_char && !in_string && calc[i] == ')')
+            in_parentheses_brackets --;
+
+        if (!in_char && !in_string && calc[i] == '[')
+            in_square_brackets ++;
+        if (!in_char && !in_string && calc[i] == ']')
+            in_square_brackets --;
+
+        if (!in_string && !in_char && !in_curly_brackets && !in_parentheses_brackets && !in_square_brackets && (calc[i] == '&' || calc[i] == '|'))
+            *size += 2;
+    }
+
+    // Allocate memory to array containing values
+    (*array) = malloc (sizeof (Value) * (*size));
+
+    in_string = false;
+    in_char   = false;
+    in_curly_brackets = 0;
+    in_parentheses_brackets  = 0;
+    in_square_brackets = 0;
+
+    for (i = 0; i < calc_len; ++ i)
+    {
+        // continue if double '\' TODO: DOES NOT WORK!
+        if (calc[i] == '\\' && i >= 1 && calc[i-1] == '\\' && ++ i)
+            continue;
+
+        if (!in_char && calc[i] == '"' && (i == 0 || calc[i-1] != '\\'))
+            in_string = !in_string;
+
+        if (!in_string && calc[i] == '\'' && (i == 0 || calc[i-1] != '\\'))
+            in_char = !in_char;
+
+        if (!in_char && !in_string && calc[i] == '{')
+            in_curly_brackets ++;
+        if (!in_char && !in_string && calc[i] == '}')
+            in_curly_brackets --;
+
+        if (!in_char && !in_string && calc[i] == '(')
+            in_parentheses_brackets ++;
+        if (!in_char && !in_string && calc[i] == ')')
+            in_parentheses_brackets --;
+
+        if (!in_char && !in_string && calc[i] == '[')
+            in_square_brackets ++;
+        if (!in_char && !in_string && calc[i] == ']')
+            in_square_brackets --;
+
+        // Skips at beginning and if it is not a compute
+        if (calc[i] != '&' && calc[i] != '|')
+            continue;
+        if (i == 0)
+            error ("Compute ´%c´ cannot stand at the beginning!", (void*)(intptr_t)calc[i]);
+
+        if (in_string || in_char || in_curly_brackets || in_parentheses_brackets || in_square_brackets)
+            continue;
+
+        // Insert value to float array
+        (*array)[array_i ++] = fr_convert_to_value (frs_substr (calc, last_i, i));
+
+        // Insert compute to float array
+        (*array)[array_i ++] = VALUE_INT (calc[i]);
+
+        last_i = i + 1;
+
+        // Moves index till no compute was found, or value was found
+        for (j = 1; i + j < calc_len && (calc[i+j] == '&' || calc[i+j] == '|'); ++ j, ++ i);
+    }
+
+    // Insert value
+    (*array)[array_i ++] = fr_convert_to_value (frs_substr (calc, last_i, i));
+}
+#include <stdio.h>
+Value gna_registry_boolean_algebra (Registry** register_list, const char* calc, Value (*fr_convert_to_value) (char*))
+{
+    size_t i, j, size;
+    Value* array;
+
+    // Converts cstring to an float array
+    _gna_conv_to_registry_boolean_algebra (&array, calc, &size, fr_convert_to_value);
+
+    bool has_found_term = 0;
+    int  alloc_value    = 0;
+
+    /** Starts calculation with AND ´&´ **/
+    for (i = 1; i < size; i += 2)
+    {
+        char compute = (intptr_t)array[i].value;
+
+        if (compute != '&')
+        {
+            has_found_term = 0;
+            continue;
+        }
+
+        if (!has_found_term)
+        {
+            alloc_value = fr_register_add (register_list, REGISTER_ALLOC (array[i - 1]));
+            array[i - 1] = POINTER (alloc_value);
+            has_found_term = 1;
+        }
+
+        // Calculating mul or div depending on compute
+        if (compute == '&')
+            fr_register_add (register_list, REGISTER_AND (VALUE_INT (alloc_value), array[i + 1]));
+        else
+            ; // TODO: Error!!! Unknown Compute!
+
+        // Override changes over the rest of the array 
+        for (j = i; j < size - 2; ++ j)
+            array[j] = array[j + 2];
+
+        size -= 2;
+        i -= 2;
+    }
+
+    /** Calculating with OR ´|´ **/
+
+    // Store first value as result -> Simpler to calculate with
+    size_t m_pos = fr_register_add (register_list, REGISTER_ALLOC (array[0]));
+
+    // Sum of all values in float array
+    for (i = 1; i < size; i += 2)
+    {
+        if ((intptr_t)array[i].value == '|')
+            fr_register_add (register_list, REGISTER_OR (VALUE_INT (m_pos), array[i + 1]));
+        else
+            ; // TODO: Error!!! Unknown compute!
     }
 
     free (array);

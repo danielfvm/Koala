@@ -9,7 +9,11 @@ typedef struct
     char*  name;
 } Variable;
 
+void error (const char* msg, const void* variablen, ...);
+
 void  fr_compiler_init ();
+
+void  fr_add_variable (Variable** variables, size_t* variable_count, const char* path, const char* name, const bool constant, Value value);
 
 void  fr_compiler_run ();
 

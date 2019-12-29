@@ -151,7 +151,7 @@ char* frs_substr (const char *src, int m, int n)
 // Trims beginning and end of &string
 void frs_trim (char** text)
 {
-    if (**text == '\0')
+    if (text == NULL || (*text) == NULL || **text == '\0')
         return;
 
     // Trim begin
@@ -165,6 +165,9 @@ void frs_trim (char** text)
 
 void frs_ctrim (char** text)
 {
+    if (text == NULL || (*text) == NULL)
+        return;
+
     size_t i, j;
     bool in_string = 0;
     bool in_char   = 0;
@@ -196,6 +199,9 @@ bool frs_is_bracket (char c)
 
 size_t frs_contains (char* text, char c)
 {
+    if (text == NULL)
+        return false;
+
     bool in_string = 0;
     bool in_char   = 0;
     int in_bracket = 0;
@@ -224,6 +230,9 @@ size_t frs_contains (char* text, char c)
 
 void frs_filter_comment (char** text)
 {
+    if (text == NULL || (*text) == NULL)
+        return;
+
     size_t i, j;
     bool in_string = false;
     bool in_char   = false;
@@ -259,6 +268,9 @@ void frs_filter_comment (char** text)
 
 bool frs_is_str_concat (char* str)
 {
+    if (str == NULL)
+        return false;
+
     char* text = malloc (strlen (str) + 1);
     strcpy (text, str);
 
@@ -280,13 +292,15 @@ bool frs_is_str_concat (char* str)
         else if (!is_string)
         {
             free (text);
-            return 1;
+            text = NULL;
+            return true;
         }
     }
 
     free (text);
+    text = NULL;
 
-    return 0;
+    return false;
 }
 
 // Splits a string with a given delim saved in a *string passed as reference

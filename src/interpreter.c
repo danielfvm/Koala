@@ -1,9 +1,11 @@
 #include "interpreter.h"
+#include "compiler.h"
 #include "util.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 
 void fr_register_create (Registry** register_list)
 {
@@ -63,7 +65,13 @@ Value VALUE_CHAR (char value) { return (Value) { DT_CHAR, VALUE_TYPE_VALUE, (voi
 
 Value VALUE_INT (int value) { return (Value) { DT_INT, VALUE_TYPE_VALUE, (void*)(intptr_t) value }; }
 
-Value VALUE_FLOAT (float value) { return (Value) { DT_FLOAT, VALUE_TYPE_VALUE, (void*)(long long)(value * FLOAT_CONV_VALUE) }; }
+Value VALUE_FLOAT (float value)
+{
+    float* p_float = malloc (sizeof (float));
+    *p_float = value;
+    return (Value) { DT_FLOAT, VALUE_TYPE_VALUE, p_float };
+//    return (Value) { DT_FLOAT, VALUE_TYPE_VALUE, (void*)(long long)(value * FLOAT_CONV_VALUE) };
+}
 
 Value VALUE_NULL () { return (Value) { DT_NONE, VALUE_TYPE_VALUE, NULL }; }
 
@@ -99,9 +107,7 @@ Register* CREATE_REGISTER_3 (byte type, Value one, Value two, Value three)
     return reg;
 }
 
-Register* REGISTER_ALLOC (Value m_value) { return CREATE_REGISTER_3 (ALLOC, VALUE_NULL (), m_value, VALUE_INT (0)); }
-
-Register* REGISTER_SALLOC (Value m_value) { return CREATE_REGISTER_3 (SALLOC, VALUE_NULL (), m_value, VALUE_INT (0)); }
+Register* REGISTER_ALLOC (Value m_value) { return CREATE_REGISTER_3 (ALLOC, VALUE_NULL (), m_value, VALUE_INT (false)); }
 
 Register* REGISTER_ADD (Value m_index, Value m_add) { return CREATE_REGISTER_2 (ADD, m_index, m_add); }
 
@@ -119,7 +125,11 @@ Register* REGISTER_READ_CHAR (Value m_index) { return CREATE_REGISTER_1 (READ_CH
 
 Register* REGISTER_SET (Value m_index, Value m_value) { return CREATE_REGISTER_2 (SET, m_index, m_value); }
 
-Register* REGISTER_IND (Value m_index, Value m_value, Value m_value_index) { return CREATE_REGISTER_3 (IND, m_index, m_value, m_value_index); }
+Register* REGISTER_SSET (Value m_index, Value m_value) { return CREATE_REGISTER_2 (SSET, m_index, m_value); }
+
+Register* REGISTER_IND (Value m_value, Value m_index, Value m_value_index) { return CREATE_REGISTER_3 (IND, m_value, m_index, m_value_index); }
+
+Register* REGISTER_IND_SET (Value m_value, Value m_index, Value m_set) { return CREATE_REGISTER_3 (IND_SET, m_value, m_index, m_set); }
 
 Register* REGISTER_EQ (Value m_value1, Value m_value2, Value not_position) { return CREATE_REGISTER_3 (EQ, m_value1, m_value2, not_position); }
 
@@ -130,6 +140,12 @@ Register* REGISTER_CMP (Value m_value1, Value m_value2, Value not_position) { re
 Register* REGISTER_NCMP (Value m_value1, Value m_value2, Value not_position) { return CREATE_REGISTER_3 (NCMP, m_value1, m_value2, not_position); }
 
 Register* REGISTER_SYS (Value cmd) { return CREATE_REGISTER_1 (SYS, cmd); }
+
+Register* REGISTER_OR (Value m_index, Value m_or) { return CREATE_REGISTER_2 (OR, m_index, m_or); }
+
+Register* REGISTER_AND (Value m_index, Value m_and) { return CREATE_REGISTER_2 (AND, m_index, m_and); }
+
+Register* REGISTER_POW (Value m_value1, Value m_value2, Value m_index) { return CREATE_REGISTER_3 (POW, m_value1, m_value2, m_index); }
 
 Register* REGISTER_BIG (Value m_value1, Value m_value2, Value m_index) { return CREATE_REGISTER_3 (BIG, m_value1, m_value2, m_index); }
 
@@ -187,6 +203,12 @@ int fr_run (const Registry* register_list)
         register_list[(intptr_t) fr_get_memory (value)]->reg_values[0].value = new_value;
     }
 
+    void fr_set_memory_float (Value value, float new_value)
+    {
+        (*(float*)register_list[(intptr_t) fr_get_memory (value)]->reg_values[0].value) = new_value;
+    }
+
+
     void fr_set_data_type (Value value, int new_data_type)
     {
         register_list[(intptr_t) fr_get_memory (value)]->reg_values[0].data_type = new_data_type;
@@ -200,6 +222,14 @@ int fr_run (const Registry* register_list)
             return register_list[(intptr_t)fr_get_memory (register_list[(intptr_t) value.value]->reg_values[0])]->reg_values[0].data_type;
         return ((Value)register_list[(intptr_t) value.value]->reg_values[0]).data_type;
     }
+
+    #define fr_get_as_number(value) ( fr_get_data_type (value) == DT_FLOAT ? *(float*)fr_get_memory (value) : (intptr_t)fr_get_memory (value) )
+
+    #define fr_set_as_number(value, new_value) \
+        if (fr_get_data_type (register_list[(int)fr_get_as_number (value)]->reg_values[0]) == DT_FLOAT) \
+            fr_set_memory_float (value, (float) (new_value)); \
+        else \
+            fr_set_memory (value, (void*) (intptr_t)(int) (new_value));
 
     if (!register_list)
     {
@@ -238,15 +268,13 @@ int fr_run (const Registry* register_list)
                 register_list[(intptr_t)fr_get_memory (reg->reg_values[0])]->reg_values[0] = stack[stack_size];
                 continue;
             }
-            case SALLOC:
+            case ALLOC:
             {
                 if (reg->reg_values[2].value) // do not ALLOC if SET was called on this memory!
                 {
                     reg->reg_values[2].value = false; // reset SALLOC
                     continue;
                 }
-
-                case ALLOC:
 
                 if (fr_get_data_type (reg->reg_values[1]) == DT_STRING)
                 {
@@ -256,23 +284,45 @@ int fr_run (const Registry* register_list)
                     strcpy (reg->reg_values[0].value, fr_get_memory (reg->reg_values[1]));
                     reg->reg_values[0].data_type = DT_STRING;
                 }
+                else if (fr_get_data_type (reg->reg_values[1]) == DT_FLOAT)
+                {
+                    if (reg->reg_values[0].value == NULL)
+                        reg->reg_values[0].value = malloc (sizeof (float)); 
+                    (*(float*)reg->reg_values[0].value) = (float)fr_get_as_number (reg->reg_values[1]);
+                    reg->reg_values[0].data_type = DT_FLOAT;
+                }
                 else
                 {
-                    reg->reg_values[0] = fr_get_memory_value (reg->reg_values[1]);
+                    reg->reg_values[0].value = fr_get_memory (reg->reg_values[1]);
+                    reg->reg_values[0].data_type = fr_get_data_type (reg->reg_values[1]);
                 }
                 continue;
             }
             case IND:
             {
-                fr_set_memory    (reg->reg_values[0], (void*)(intptr_t)((char*)fr_get_memory (reg->reg_values[1]))[(intptr_t) fr_get_memory (reg->reg_values[2])]);
-                fr_set_data_type (reg->reg_values[0], DT_CHAR);
+                if (fr_get_data_type (reg->reg_values[2]) != DT_INT)
+                    error ("Expected DataType ´INT´ for indexing", NULL);
+                if (fr_get_data_type (reg->reg_values[1]) == DT_STRING)
+                {
+                    fr_set_memory    (reg->reg_values[0], (void*)(intptr_t)((char*)fr_get_memory (reg->reg_values[1]))[(intptr_t) fr_get_memory (reg->reg_values[2])]);
+                    fr_set_data_type (reg->reg_values[0], DT_CHAR);
+                }
                 continue;
             }
-            case SET:
+            case IND_SET:
             {
+                if (fr_get_data_type (reg->reg_values[1]) != DT_INT)
+                    error ("Expected DataType ´INT´ for indexing", NULL);
+                if (fr_get_data_type (reg->reg_values[0]) == DT_STRING)
+                    ((char*)fr_get_memory (reg->reg_values[0]))[(intptr_t) fr_get_memory (reg->reg_values[1])] = (intptr_t) fr_get_memory (reg->reg_values[2]);
+                continue;
+            }
+            case SSET:
+            {
+                register_list[(intptr_t)fr_get_memory (reg->reg_values[0])]->reg_values[2].value = (void*)(intptr_t)true; // used in ALLOC
+            case SET:
                 fr_set_memory    (reg->reg_values[0], fr_get_memory (reg->reg_values[1]));
                 fr_set_data_type (reg->reg_values[0], fr_get_data_type (reg->reg_values[1]));
-                register_list[(intptr_t)reg->reg_values[0].value]->reg_values[2].value = (void*)(intptr_t)true; // used in SALLOC
                 continue;
             }
             case NEG:
@@ -306,26 +356,19 @@ int fr_run (const Registry* register_list)
                         ((char*) *m_value)[size] = m_value_add;
                         ((char*) *m_value)[size + 1] = '\0';
                     }
-                    else if (data_type == DT_INT)
-                    {
-                        char* str_num = malloc (10 + 1);
-                        sprintf (str_num, "%d", (int)(intptr_t) m_value_add);
-                        int old_size = strlen (*m_value);
-                        int new_size = old_size + strlen (str_num);
-                        (*m_value) = realloc (*m_value, new_size + 1);
-                        int j;
-                        for (j = old_size; j < new_size; ++ j)
-                            ((char*)(*m_value))[j] = str_num[j - old_size];
-                        ((char*)(*m_value))[j] = str_num[j - old_size];
-                        free (str_num);
-                    }
-                    else if (data_type == DT_FLOAT)
+                    else if (data_type == DT_FLOAT || data_type == DT_INT)
                     {
                         char* str_num = malloc (38 + 1);
-                        sprintf (str_num, "%f", (float)(intptr_t) m_value_add / FLOAT_CONV_VALUE);
+
+                        if (data_type == DT_FLOAT)
+                            sprintf (str_num, "%f", fr_get_as_number (reg->reg_values[1]));
+                        else
+                            sprintf (str_num, "%d", (int)fr_get_as_number (reg->reg_values[1]));
+
                         int old_size = strlen (*m_value);
                         int new_size = old_size + strlen (str_num);
                         (*m_value) = realloc (*m_value, new_size + 1);
+
                         int j;
                         for (j = old_size; j < new_size; ++ j)
                             ((char*)(*m_value))[j] = str_num[j - old_size];
@@ -345,34 +388,21 @@ int fr_run (const Registry* register_list)
                     ((char*) *m_value)[size + 1] = '\0';
                     continue;
                 }
-                else if (register_list[m_value]->reg_values[0].data_type == DT_FLOAT && fr_get_data_type (reg->reg_values[1]) != DT_FLOAT)
-                    m_value_add *= FLOAT_CONV_VALUE;
-                else if (register_list[m_value]->reg_values[0].data_type != DT_FLOAT && fr_get_data_type (reg->reg_values[1]) == DT_FLOAT)
-                    m_value_add /= FLOAT_CONV_VALUE;
-
-                new_value = register_list[m_value]->reg_values[0].value + m_value_add;
-                fr_set_memory (reg->reg_values[0], (void*) new_value);
+                else
+                    fr_set_as_number (reg->reg_values[0], fr_get_as_number (register_list[(intptr_t)fr_get_as_number (reg->reg_values[0])]->reg_values[0]) + (float)fr_get_as_number (reg->reg_values[1]));
                 continue;
             }
             case SUB:
             {
-                intptr_t m_value     = (intptr_t) fr_get_memory (reg->reg_values[0]);
-                intptr_t m_value_sub = (intptr_t) fr_get_memory (reg->reg_values[1]);
-
-                if (register_list[m_value]->reg_values[0].data_type == DT_FLOAT && fr_get_data_type (reg->reg_values[1]) != DT_FLOAT)
-                    m_value_sub *= FLOAT_CONV_VALUE;
-                else if (register_list[m_value]->reg_values[0].data_type != DT_FLOAT && fr_get_data_type (reg->reg_values[1]) == DT_FLOAT)
-                    m_value_sub /= FLOAT_CONV_VALUE;
-
-                fr_set_memory (reg->reg_values[0], (void*) (register_list[m_value]->reg_values[0].value - m_value_sub));
+                fr_set_as_number (reg->reg_values[0], fr_get_as_number (register_list[(intptr_t)fr_get_as_number (reg->reg_values[0])]->reg_values[0]) - (float)fr_get_as_number (reg->reg_values[1]));
                 continue;
             }
             case MUL:
             {
                 void** value = &register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].value;
                 intptr_t m_value_mul = (intptr_t) fr_get_memory (reg->reg_values[1]);
-                byte     data_type_add = fr_get_data_type (reg->reg_values[1]);
-                byte     data_type     = register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type;
+                byte data_type_add = fr_get_data_type (reg->reg_values[1]);
+                byte data_type     = register_list[(intptr_t) fr_get_memory (reg->reg_values[0])]->reg_values[0].data_type;
 
                 size_t i; 
 
@@ -408,14 +438,8 @@ int fr_run (const Registry* register_list)
 
                     fr_set_data_type (reg->reg_values[0], DT_STRING);
                 }
-                else if (data_type == DT_FLOAT && data_type_add != DT_FLOAT)
-                    (*value) = (void*)(intptr_t)(((float)(intptr_t)(*value) * (m_value_mul * FLOAT_CONV_VALUE)) / FLOAT_CONV_VALUE);
-                else if (data_type != DT_FLOAT && data_type_add == DT_FLOAT)
-                    (*value) = (void*)(intptr_t)((float)(intptr_t)(*value) * (m_value_mul / FLOAT_CONV_VALUE));
-                else if (data_type == DT_FLOAT && data_type_add == DT_FLOAT)
-                    (*value) = (void*)(intptr_t)((((float)(intptr_t)(*value) / FLOAT_CONV_VALUE) * (m_value_mul / FLOAT_CONV_VALUE)) * FLOAT_CONV_VALUE);
                 else
-                    (*value) = (void*)(((intptr_t)(*value)) * m_value_mul);
+                    fr_set_as_number (reg->reg_values[0], fr_get_as_number (register_list[(intptr_t)fr_get_as_number (reg->reg_values[0])]->reg_values[0]) * (float)fr_get_as_number (reg->reg_values[1]));
                 continue;
             }
             case MOD:
@@ -430,61 +454,68 @@ int fr_run (const Registry* register_list)
             }
             case DIV:
             {
-                intptr_t m_value       = (intptr_t) fr_get_memory (reg->reg_values[0]);
-                intptr_t m_value_div   = (intptr_t) fr_get_memory (reg->reg_values[1]);
-                byte data_type_add = fr_get_data_type (reg->reg_values[1]);
-                byte data_type     = register_list[m_value]->reg_values[0].data_type;
-
-                if (data_type == DT_FLOAT && data_type_add != DT_FLOAT) 
-                    fr_set_memory (reg->reg_values[0], (void*)(intptr_t)((((intptr_t) register_list[m_value]->reg_values[0].value / FLOAT_CONV_VALUE) / m_value_div) * FLOAT_CONV_VALUE));
-                else if (data_type != DT_FLOAT && data_type_add == DT_FLOAT)
-                    fr_set_memory (reg->reg_values[0], (void*)(intptr_t)((intptr_t) register_list[m_value]->reg_values[0].value / (m_value_div / FLOAT_CONV_VALUE)));
-                else if (data_type == DT_FLOAT && data_type_add == DT_FLOAT)
-                    fr_set_memory (reg->reg_values[0], (void*)(intptr_t)((((intptr_t) register_list[m_value]->reg_values[0].value / FLOAT_CONV_VALUE) / ((float) m_value_div / FLOAT_CONV_VALUE)) * FLOAT_CONV_VALUE));
-                else
-                    fr_set_memory (reg->reg_values[0], (void*) ((intptr_t) register_list[m_value]->reg_values[0].value / m_value_div));
+                fr_set_as_number (reg->reg_values[0], fr_get_as_number (register_list[(intptr_t)fr_get_as_number (reg->reg_values[0])]->reg_values[0]) / (float)fr_get_as_number (reg->reg_values[1]));
                 continue;
             }
             case CMP:
             {
-                if (fr_get_memory (reg->reg_values[0]) != fr_get_memory (reg->reg_values[1]))
+                if (fr_get_as_number (reg->reg_values[0]) != fr_get_as_number (reg->reg_values[1]))
                     i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
                 continue;
             }
             case NCMP:
             {
-                if ((int)(intptr_t)fr_get_memory (reg->reg_values[0]) == (int)(intptr_t)fr_get_memory (reg->reg_values[1]))
+                if (fr_get_as_number (reg->reg_values[0]) == fr_get_as_number (reg->reg_values[1]))
                     i = (intptr_t) fr_get_memory (reg->reg_values[2]) - 1;
                 continue;
             }
             case BEQ:
             {
-                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) >= (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
+                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)(fr_get_as_number (reg->reg_values[0]) >= fr_get_as_number (reg->reg_values[1])));
                 continue;
             }
             case SEQ:
             {
-                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) <= (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
+                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)(fr_get_as_number (reg->reg_values[0]) <= fr_get_as_number (reg->reg_values[1])));
+                continue;
+            }
+            case POW:
+            {
+                fr_set_as_number (reg->reg_values[2], pow (fr_get_as_number (reg->reg_values[0]), fr_get_as_number (reg->reg_values[1])));
                 continue;
             }
             case BIG:
             {
-                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) > (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
+                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)(fr_get_as_number (reg->reg_values[0]) > fr_get_as_number (reg->reg_values[1])));
+                continue;
+            }
+            case OR:
+            {
+                intptr_t m_value     = (intptr_t) fr_get_as_number (reg->reg_values[0]);
+                intptr_t m_value_sub = (intptr_t) fr_get_as_number (reg->reg_values[1]);
+                fr_set_memory (reg->reg_values[0], (void*)(intptr_t)(fr_get_as_number (register_list[m_value]->reg_values[0]) || m_value_sub));
+                continue;
+            }
+            case AND:
+            {
+                intptr_t m_value     = (intptr_t) fr_get_as_number (reg->reg_values[0]);
+                intptr_t m_value_sub = (intptr_t) fr_get_as_number (reg->reg_values[1]);
+                fr_set_memory (reg->reg_values[0], (void*)(intptr_t)(fr_get_as_number (register_list[m_value]->reg_values[0]) && m_value_sub));
                 continue;
             }
             case SMA:
             {
-                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) < (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
+                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)(fr_get_as_number (reg->reg_values[0]) < fr_get_as_number (reg->reg_values[1])));
                 continue;
             }
             case EQ:
             {
-                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) == (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
+                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)(fr_get_as_number (reg->reg_values[0]) == fr_get_as_number (reg->reg_values[1])));
                 continue;
             }
             case NEQ:
             {
-                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)((int)(intptr_t)fr_get_memory (reg->reg_values[0]) != (int)(intptr_t)fr_get_memory (reg->reg_values[1])));
+                fr_set_memory (reg->reg_values[2], (void*)(intptr_t)(fr_get_as_number (reg->reg_values[0]) != fr_get_as_number (reg->reg_values[1])));
                 continue;
             }
             case PRINT:
@@ -497,7 +528,7 @@ int fr_run (const Registry* register_list)
                 else if (m_type == DT_CHAR)
                     printf ("%c", (intptr_t) fr_get_memory (reg->reg_values[0]));
                 else if (m_type == DT_FLOAT)
-                    printf ("%f", (intptr_t) fr_get_memory (reg->reg_values[0]) / FLOAT_CONV_VALUE);
+                    printf ("%f", *(float*)fr_get_memory (reg->reg_values[0]));
                 continue;
             }
             case FLUSH:
@@ -510,7 +541,7 @@ int fr_run (const Registry* register_list)
                 else if (m_type == DT_CHAR)
                     printf ("%c", (intptr_t) fr_get_memory (reg->reg_values[0]));
                 else if (m_type == DT_FLOAT)
-                    printf ("%f", (intptr_t) fr_get_memory (reg->reg_values[0]) / FLOAT_CONV_VALUE);
+                    printf ("%f", *(float*)fr_get_memory (reg->reg_values[0]));
                 fflush (NULL);
                 continue;
             }
@@ -526,7 +557,7 @@ int fr_run (const Registry* register_list)
 
                     fgets (buffer, buffer_size, stdin);
 
-                    *m_value = realloc (*m_value, strlen (buffer));
+                    *m_value = realloc (*m_value, strlen (buffer) + 1);
                     strcpy (*m_value, buffer);
                     free (buffer);
                 }
@@ -544,7 +575,7 @@ int fr_run (const Registry* register_list)
                 {
                     float value;
                     scanf ("%f", &value);
-                    *m_value = (void*)(intptr_t)(value * FLOAT_CONV_VALUE);
+                    *(float*)(*m_value) = value;
                     getchar();
                 }
                 continue;

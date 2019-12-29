@@ -11,11 +11,11 @@ enum Execution
 {
     NONE,
     ALLOC,
-    SALLOC,
     PRINT,
     READ,
     EQ,
     NEQ,
+    POW,
     BIG,
     SMA,
     BEQ,
@@ -27,15 +27,19 @@ enum Execution
     MOD,
     DIV,
     SET,
+    SSET,
     SYS,
     NEG,
     PUSH,
     POP,
     IND,
+    IND_SET,
     CMP,
     NCMP,
     READ_CHAR,
     CODE,
+    OR,
+    AND,
     FLUSH
 };
 
@@ -75,7 +79,7 @@ typedef Register* Registry;
 
 typedef Value Memory;
 
-void fr_register_create (Registry** register_list);
+void   fr_register_create (Registry** register_list);
 
 size_t fr_register_add (Registry** register_list, Register* reg);
 
@@ -83,7 +87,7 @@ size_t fr_register_add_all (Registry** register_list, Register** regs);
 
 size_t fr_get_current_register_position (Registry** register_list);
 
-char* fr_get_register_type_as_name (Register* reg);
+char*  fr_get_register_type_as_name (Register* reg);
 
 Value POINTER (int m_pointer);
 
@@ -104,8 +108,6 @@ Value VALUE_VALUE (Value value);
 
 Register* REGISTER_ALLOC (Value m_value);
 
-Register* REGISTER_SALLOC (Value m_value);
-
 Register* REGISTER_ADD (Value m_index, Value m_add);
 
 Register* REGISTER_SUB (Value m_index, Value m_sub);
@@ -122,7 +124,11 @@ Register* REGISTER_DIV (Value m_index, Value m_div);
 
 Register* REGISTER_SET (Value m_index, Value m_value);
 
+Register* REGISTER_SSET (Value m_index, Value m_value);
+
 Register* REGISTER_IND (Value m_index, Value m_value, Value m_value_index);
+
+Register* REGISTER_IND_SET (Value m_value, Value m_index, Value m_set);
 
 Register* REGISTER_EQ (Value m_value1, Value m_value2, Value not_position);
 
@@ -133,6 +139,12 @@ Register* REGISTER_CMP (Value m_value1, Value m_value2, Value not_position);
 Register* REGISTER_NCMP (Value m_value1, Value m_value2, Value not_position);
 
 Register* REGISTER_SYS (Value cmd);
+
+Register* REGISTER_OR (Value m_index, Value m_or);
+
+Register* REGISTER_AND (Value m_index, Value m_and);
+
+Register* REGISTER_POW (Value m_value1, Value m_value2, Value m_index);
 
 Register* REGISTER_BIG (Value m_value1, Value m_value2, Value m_index);
 

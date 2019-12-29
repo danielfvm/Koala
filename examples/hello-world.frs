@@ -1,5 +1,1 @@
-var x = 0;
-(x != 10000000) -> {
-    O(flush): x, '\n';
-    x += 1;
-}
+O: "Hello World!\n";

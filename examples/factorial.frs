@@ -1,3 +1,7 @@
+<*
+  This ´factorial´ program works with inheritance.
+*>
+
 factorial (x, y = 1) {
     !factorial.x > ret factorial.y;
     ret factorial (factorial.x - 1, factorial.y * factorial.x);

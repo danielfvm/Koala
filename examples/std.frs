@@ -16,7 +16,7 @@
     <* STD - Read Methode *>
     read (type = INT) {
         var x = type;
-        I: &x;
+        I: $x;
         ret x;
     }
 
@@ -33,21 +33,20 @@
     clear () > S: "clear";
 
     <* STD - For loop *>
-    for (min = INT, max = INT, lambda = (x) { O: x, '\n'; }) {
-        (min <= max) -> {
-            lambda (min);
-            min += 1;
-        }
-    }
+    for (min = INT, max = INT, lambda) > (min < max) { 
+        (min <= max) -> lambda ((min += 1) - 1);
+    } {
+        (min >= max) -> lambda ((min -= 1) + 1);
+    };
 
-    <* STD - For loop *>
-    forEdit (min = INT, max = INT, value = INT, lambda = (x, w) { O: x, ' ', w, '\n'; }) {
-        (min <= max) -> {
-            lambda (min, &value);
-            min += 1;
-        }
+    <* STD - For loop with edit *>
+    forEdit (min = INT, max = INT, value = INT, lambda) > (min < max) {
+        (min <= max) -> lambda ((min += 1) - 1, $value);
         ret value;
-    }
+    } {
+        (min >= max) -> lambda ((min -= 1) + 1, $value);
+        ret value;
+    };
 
     <* STD - exit *>
     exit (status = INT) {
@@ -61,6 +60,7 @@
         ret size;
     }
 
+    <* STD - error *>
     error (msg, status = 1) {
         O: "(Std-Runtime-Error)>> ", msg, '\n';
         exit (status);
@@ -88,21 +88,17 @@
     str (x) < STR + x;
 
     <* STD - toHex *>
-    toHex (value = INT, base = 16, size = 5, text = STR) {
+    toBase (value = INT, base = 16, size = 8, text = STR) {
         value -> {
             val type = value % base;
-            text = char(type < 10 ? '0' + type : 'A' + type - 10) + text;
+            text = char (type < 10 ? '0' + type : 'A' + type - 10) + text;
             value /= base;
         }
         ret ('0' * (size - len (text))) + text; 
     }
 
-    high (value, base = 10) < forEdit (1, value, 1, (i, num) {
-        ~num *= base;
-    });
-
     toNum (value, base = 16) < forEdit (0, len (value) - 1, 0, (i, num) {
-        ~num += high (len (value) - i - 1, base) * int (value[i] >= 'A' ? value[i] - 'A' + 10 : value[i] - '0');
+        ~num += (base ^ (len (value) - i - 1)) * int (value[i] >= 'A' ? value[i] - 'A' + 10 : value[i] - '0');
     });
 
 <* END - Koala's Standart Library *>
@@ -121,14 +117,11 @@ size (vector, size = 0) {
 }
 
 add (vector, value) {
-    ~vector += toHex(value, 8);
+    ~vector += toHex(value);
 }
 
 get (vector, pos) {
-    (pos >= size (vector)) {
-        O: "Array out of bounds!\n";
-        ret 0;
-    } {
-        ret ~(toNum(substr(vector, pos * 8, pos * 8 + 8)));
-    }
-}*>
+    var index = substr(vector, pos * 8, pos * 8 + 8);
+    ret toNum(index);
+}
+*>
