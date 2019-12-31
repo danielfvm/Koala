@@ -1,6 +1,8 @@
 #include "interpreter.h"
 #include "util.h"
 
+#include <stdarg.h>
+
 typedef struct
 {
     size_t position;
@@ -9,12 +11,12 @@ typedef struct
     char*  name;
 } Variable;
 
-void error (const char* msg, const void* variablen, ...);
+void error (const char* msg, ...);
 
-void  fr_compiler_init ();
+void  kl_lex_compiler_init ();
 
-void  fr_add_variable (Variable** variables, size_t* variable_count, const char* path, const char* name, const bool constant, Value value);
+void  kl_lex_add_variable (Variable** variables, size_t* variable_count, const char* path, const char* name, const bool constant, Value value);
 
-void  fr_compiler_run ();
+void  kl_lex_compiler_run ();
 
-int   fr_compile (char* code, Variable** variables, size_t* pre_variable_count, const bool reset_variables);
+int   kl_lex_compile (char* code, Variable** variables, size_t* pre_variable_count, const bool reset_variables);

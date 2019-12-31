@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 
-char* frs_read_file (const char* filepath)
+char* kl_util_read_file (const char* filepath)
 {
     char* buffer;
     FILE* file;
@@ -24,7 +24,7 @@ char* frs_read_file (const char* filepath)
     return buffer;
 }
 
-bool frs_has_illigal_ascii (const char* text)
+bool kl_util_has_illigal_ascii (const char* text)
 {
     for (size_t i = 0; text[i] != '\0'; ++ i)
         if (!((text[i] >= 'a' && text[i] <= 'z') || 
@@ -35,7 +35,7 @@ bool frs_has_illigal_ascii (const char* text)
     return 0;
 }
 
-int frs_find_string_end (size_t p, const char* text)
+int kl_util_find_string_end (size_t p, const char* text)
 {
     char string_end;
     int  string_len;
@@ -73,7 +73,7 @@ int frs_find_string_end (size_t p, const char* text)
     return old_p;
 }
 
-int frs_find_next_bracket (size_t p, const char* text)
+int kl_util_find_next_bracket (size_t p, const char* text)
 {
     if (p >= strlen (text))
     {
@@ -127,7 +127,7 @@ int frs_find_next_bracket (size_t p, const char* text)
     return -1;
 }
 
-char* frs_substr (const char *src, int m, int n)
+char* kl_util_substr (const char *src, int m, int n)
 {
     unsigned int len = n - m; // length of string
     unsigned int i;
@@ -149,7 +149,7 @@ char* frs_substr (const char *src, int m, int n)
 }
 
 // Trims beginning and end of &string
-void frs_trim (char** text)
+void kl_util_trim (char** text)
 {
     if (text == NULL || (*text) == NULL || **text == '\0')
         return;
@@ -163,7 +163,7 @@ void frs_trim (char** text)
         (*text)[len] = '\0';
 }
 
-void frs_ctrim (char** text)
+void kl_util_ctrim (char** text)
 {
     if (text == NULL || (*text) == NULL)
         return;
@@ -192,12 +192,12 @@ void frs_ctrim (char** text)
     }
 }
 
-bool frs_is_bracket (char c)
+bool kl_util_is_bracket (char c)
 {
     return c == '(' || c == '[' || c == '{' || c == ')' || c == ']' || c == '}';
 }
 
-size_t frs_contains (char* text, char c)
+size_t kl_util_contains (char* text, char c)
 {
     if (text == NULL)
         return false;
@@ -222,13 +222,13 @@ size_t frs_contains (char* text, char c)
         if (text[i] == ')' || text[i] == ']' || text[i] == '}')
             in_bracket --;
 
-        if (text[i] == c && (frs_is_bracket (c) || (!in_string && !in_char && !in_bracket)))
+        if (text[i] == c && (kl_util_is_bracket (c) || (!in_string && !in_char && !in_bracket)))
             return true + i;
     }
     return false;
 }
 
-void frs_filter_comment (char** text)
+void kl_util_filter_comment (char** text)
 {
     if (text == NULL || (*text) == NULL)
         return;
@@ -252,6 +252,13 @@ void frs_filter_comment (char** text)
         if (in_string || in_char)
             continue;
 
+        // Comment1: **
+        if (in_comm == -1 && (*text)[i] == '*' && (*text)[i + 1] == '*')
+            while ((*text)[i] != '\n' && (*text)[i] != '\0')
+                for (j = i; (*text)[j] != '\n' && (*text)[j] != '\0'; ++ j)
+                    (*text)[j] = (*text)[j + 1];
+
+        // Comment2: <* *>
         if ((*text)[i] == '<' && (*text)[i + 1] == '*')
             in_comm = i;
         if (in_comm != -1 && i >= 2 && (*text)[i - 1] == '*' && (*text)[i] == '>')
@@ -266,15 +273,15 @@ void frs_filter_comment (char** text)
     }
 }
 
-bool frs_is_str_concat (char* str)
+bool kl_util_is_str_concat (char* str)
 {
-    if (str == NULL)
+    if (str == NULL || *str == '\0')
         return false;
 
     char* text = malloc (strlen (str) + 1);
     strcpy (text, str);
 
-    frs_ctrim (&text);
+    kl_util_ctrim (&text);
 
     bool is_string = 0;
 
@@ -285,7 +292,7 @@ bool frs_is_str_concat (char* str)
             continue;
 
         if (text[i] == '$' && text[i + 1] == '{')
-            i = frs_find_next_bracket (i + 1, text);
+            i = kl_util_find_next_bracket (i + 1, text);
 
         if (text[i] == '"' && (i == 0 || text[i-1] != '\\'))
             is_string = !is_string;
@@ -305,8 +312,11 @@ bool frs_is_str_concat (char* str)
 
 // Splits a string with a given delim saved in a *string passed as reference
 // TODO: double '\\' does not work!
-int frs_split (char* buffer, char delim, char*** output)
+int kl_util_split (char* buffer, char delim, char*** output)
 {
+    if (buffer == NULL || *buffer == '\0')
+        return 0;
+
     int  partCount = 0; // Count of splited elements used as index for ´output´
     int  in_bracket = 0; // If ´inBracket´ bigger than 0 then ignore delim
     bool in_string  = 0; // If ´inString´ eq 1 then ignore delim & brackets
@@ -345,7 +355,7 @@ int frs_split (char* buffer, char delim, char*** output)
         // Set splited substring in output and trim it
         (*output)[partCount] = lastPos;
         (*output)[partCount][ptr-lastPos] = '\0';
-        frs_trim (&(*output)[partCount]);        
+        kl_util_trim (&(*output)[partCount]);        
 
         // Count ´partCount´ up
         partCount ++;
@@ -359,13 +369,13 @@ int frs_split (char* buffer, char delim, char*** output)
 
     // Set splited substring in output and trim it
     (*output)[partCount] = lastPos;
-    frs_trim (&(*output)[partCount]);
+    kl_util_trim (&(*output)[partCount]);
 
     // Return ´partCount´ used to iterate through substr list
     return partCount + 1;
 }
 
-char* frs_str_replace (char* orig, char* rep, char* with) 
+char* kl_util_str_replace (char* orig, char* rep, char* with) 
 {
     char* result;  // the return string
     char* ins;     // the next insert point

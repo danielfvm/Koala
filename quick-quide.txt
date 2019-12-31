@@ -1,0 +1,215 @@
+-- Welcome to the Quick-Guide, where you can learn the basics of Koala-lang --
+
+
+-> 0. Generally
+    * Every statement ends with ´;´
+
+
+
+
+-> 1. Interpreter Usage
+To execute a Koala-Script write in the Terminal:
+    $ koala <filepath.frs>
+
+
+
+
+-> 2. Hello World
+To write a Message in the Terminal you can use ´O:´.
+
+    1> O: "Hello World!\n";
+
+Noticed the ´\n´??? ´O:´ doesn't make a new line automatic,
+so to make one, you should use this symbol.
+You can also ´flush´ a text into the Terminal.
+
+    1> O(flush): "Hello World!";
+
+
+
+
+-> 3. Variable
+
+Making Variables is very simple. You can use the 2 Keywords:
+    *var
+    *val
+
+The difference is that ´val´ is constant and cannot be changed.
+There is no need to specify the DataType, Koala automatically
+sees what DataType is used.
+
+Example:
+    1> var a = "Hello World!";  <* String  *>
+    2> var b = 12;              <* Integer *>
+    3> val c = 3.14;            <* Float   *>
+    4> var d = true;            <* Integer *>
+
+You can modify the variables
+independent of it's last DataType:
+    5> a = "Another String!";   <* DataType still String *>
+    6> b = 43.32;               <* Changed Int to Float *>
+    7> c = 3;                   <* Error this Variable is const! *>
+
+To calculate with Numbers you
+can use shortcuts like:
+    8> b += 2;                  <* 12 + 2 *>
+    9> b -= 4;                  <* 14 - 4 *>
+   10> b *= 5;                  <* 10 * 5 *>
+   11> b /= 2;                  <* 50 / 2 *>
+
+Boolean algebra keywords:
+    1> x = a & b;      <* a AND b *>
+    2> x = a | b;      <* a OR b *>
+    3> x = a > b;      <* a is bigger  than b *>
+    4> x = a < b;      <* a is smaller than b *>
+    5> x = a <= b;     <* a is smaller or equal b *>
+    6> x = a >= b;     <* a is bigger  or equal b *>
+    7> x = a == b;      <* a is equal b *>
+    8> x = a != b;      <* a is not equal b *>
+
+The result will be 1 which is true
+or 0 which is false.
+
+
+
+
+-> 4. If
+To execute code if a result is true you
+can choose different ways.
+
+* 1.
+Let's asume we have a Variable called ´x´ and
+we wan't to run ´Hello World!´ if it's true.
+If you only have one Variable and you just want
+to check if it's true simply write:
+    1> x {
+    2>      O: "Hello World!\n";
+    3> }
+
+Everything in the Brackets will be executed if ´x´
+is true. In this case we could even shorten our
+code because we only have 1. Statement.
+    1> x > O: "Hello World!\n";
+
+With the ´>´ we can shorten lot of things, like
+here in this if scenario.
+
+
+* 2.
+If you want to check if it's NOT true than write
+a ´!´ before the variable:
+    1> !x > O: "No Hello World!\n";
+
+
+* 3.
+But you can clearly see that we can't use boolean
+algebra with this system, if you want to use it
+you have to put it in two Brackets:
+    1> (a > 3 & b == 2) > O: "a is bigger than 3 and b is equal 2\n";
+
+(You could also use the long form with ´{´ and ´}´
+ if you like it more.)
+
+
+
+
+-> 5. Loops (while)
+Used to execute Code multiple times
+If you want to execute code if ´x´ is true:
+    1> x -> {
+    2>      O: "Hello World!\n";
+    3> }
+
+If you set x to false, the loop will break.
+(You could use here also the short form and
+ remove the brackets ´{´ and ´}´.)
+
+If you want to loop with more condition do the
+same like shown in: ->4. If * 3.
+
+
+
+
+-> 6. Functions
+A simple function called ´add´ calculating 2 
+Numbers and returns the total of both back:
+    1> add (a, b) {
+    2>      var c = a + b;
+    3>      ret c;
+    4> }
+
+You can make it even shorter by adding up the
+numbers in return:
+    1> add (a, b) {
+    2>      ret a + b;
+    3> }
+
+Here you can also remove the Brackets:
+    1> add (a, b) > ret a + b;
+
+To make it even smaller you could remove the
+´ret´ and replace the arrow ´>´ with ´<´:
+    1> add (a, b) < a + b;
+
+To use it:
+    5> O: add (3, 5);   <* Result is 8 *>
+
+
+You can default values of variables if the
+weren't defined when the function was called:
+    1> log (text = "No text defined!") > O: text, '\n';
+
+Now when you specify your text it will be printed:
+    log ("Hello!");     <* Output: Hello! *>
+
+If you don't define you text, the default
+value will be used instead:
+    log ();             <* Output: No text defined! *>
+
+
+
+
+-> 6. Lambdas
+Lambdas are simple functions which are stored
+in Variables.
+
+Even Example Function:
+    1> var even = (x) { ret !(x % 2); };
+    2> O: even (43), '\n';      <* Output: 0 *>
+    3> O: even (12), '\n';      <* Output: 1 *>
+
+You cannot use short forms in lambdas!
+So why should I use it? Let's assume we have a
+function which will calculate two numbers depending
+on the function you provide it will process the
+two numbers differently:
+    1> calc (a, b, f) < f (a, b);
+
+Variable ´a´ is the 1. Number. Variable ´b´ is the 2. 
+Number. Variable ´f´ is a function which will calculate
+both values and return result. To do this we need
+a function to use as parameter, here two examples:
+    2> add (a, b) < a + b;
+    3> sub (a, b) < a - b;
+
+To use our ´calc´ function:
+    4> O: calc (12, 4, add), '\n';      <* Output: 16 *>
+    5> O: calc (12, 4, sub), '\n';      <* Output: 8  *>
+
+Instead of defining it's own function we could
+also use a lambda:
+    6> O: calc (12, 4, (a, b) { ret a * b; }), '\n';  <* Output 48 *>
+
+
+A better example would be the STD-For loop:
+    function def>: for (min = INT, max = INT, lambda);
+
+To use STD make sure you included the ´std.frs´:
+    1> inc "path_to_std/std.frs";
+    
+Example count from 0 to 10:
+    1> for (0, 10, (i) {
+    2>     O: i, '\n';
+    3> });
+
+

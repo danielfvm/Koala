@@ -1,9 +1,9 @@
 <* START - FOUND BUGS *>
     <* error message wrong line *>
-    <* improve float system *>
     <* wrong position for arguments when calling functions with '=' *>
-    <* make index in interpreter *>
 <* END - FOUND BUGS *>
+
+<* Rewritte STD-Lib with CLibSystem *>
 
 <* START - Koala's Standart Library *>
     <* STD - DataTypes *>
@@ -48,18 +48,6 @@
         ret value;
     };
 
-    <* STD - exit *>
-    exit (status = INT) {
-        O: "\nExit status: $status\n";
-        jump -1;
-    }
-
-    <* STD - line length *>
-    len (text = STR, size = 0) {
-        (text[size]) -> size += 1;
-        ret size;
-    }
-
     <* STD - error *>
     error (msg, status = 1) {
         O: "(Std-Runtime-Error)>> ", msg, '\n';
@@ -74,9 +62,6 @@
 
     <* STD - mkdir *>
     mkdir (file = STR) > S: "mkdir $file";
-
-    <* STD - abs make negative numbers positive *>
-    abs (x) < x < 0 ? x * (-1) : x;
 
     <* STD - cast to char *>
     char (x) < CHAR + x;

@@ -136,7 +136,7 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
         if (in_string || in_char || in_curly_brackets || in_parentheses_brackets || in_square_brackets)
             continue;
 
-        value = frs_substr (calc, last_i, i);
+        value = kl_util_substr (calc, last_i, i);
         gna_consider_sign (value);
 
         // Insert value to float array
@@ -153,7 +153,7 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
     }
 
     // Insert value
-    (*array)[array_i ++] = fr_convert_to_value (frs_substr (calc, last_i, i));
+    (*array)[array_i ++] = fr_convert_to_value (kl_util_substr (calc, last_i, i));
 }
 
 Value gna_registry_calculation_simple (Registry** register_list, const char* calc, Value (*fr_convert_to_value) (char*))
@@ -180,18 +180,18 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
 
         if (!has_found_term)
         {
-            alloc_value = fr_register_add (register_list, REGISTER_ALLOC (array[i - 1]));
+            alloc_value = kl_intp_register_add (register_list, REGISTER_ALLOC (array[i - 1]));
             array[i - 1] = POINTER (alloc_value);
             has_found_term = true;
         }
 
         // Calculating mul or div depending on compute
         if (compute == '*')
-            fr_register_add (register_list, REGISTER_MUL (VALUE_INT (alloc_value), array[i + 1]));
+            kl_intp_register_add (register_list, REGISTER_MUL (VALUE_INT (alloc_value), array[i + 1]));
         else if (compute == '%')
-            fr_register_add (register_list, REGISTER_MOD (VALUE_INT (alloc_value), array[i + 1]));
+            kl_intp_register_add (register_list, REGISTER_MOD (VALUE_INT (alloc_value), array[i + 1]));
         else if (compute == '/')
-            fr_register_add (register_list, REGISTER_DIV (VALUE_INT (alloc_value), array[i + 1]));
+            kl_intp_register_add (register_list, REGISTER_DIV (VALUE_INT (alloc_value), array[i + 1]));
 
         // Override changes over the rest of the array 
         for (j = i; j < size - 2; ++ j)
@@ -204,15 +204,15 @@ Value gna_registry_calculation_simple (Registry** register_list, const char* cal
     /** Calculating with add & minus **/
 
     // Store first value as result -> Simpler to calculate with
-    size_t m_pos = fr_register_add (register_list, REGISTER_ALLOC (array[0]));
+    size_t m_pos = kl_intp_register_add (register_list, REGISTER_ALLOC (array[0]));
 
     // Sum of all values in float array
     for (i = 1; i < size; i += 2)
     {
         if ((intptr_t)array[i].value == '+')
-            fr_register_add (register_list, REGISTER_ADD (VALUE_INT (m_pos), array[i + 1]));
+            kl_intp_register_add (register_list, REGISTER_ADD (VALUE_INT (m_pos), array[i + 1]));
         else
-            fr_register_add (register_list, REGISTER_SUB (VALUE_INT (m_pos), array[i + 1]));
+            kl_intp_register_add (register_list, REGISTER_SUB (VALUE_INT (m_pos), array[i + 1]));
     }
 
     free (array);
@@ -311,7 +311,7 @@ void _gna_conv_to_registry_boolean_algebra (Value** array, const char* calc, siz
             continue;
 
         // Insert value to float array
-        (*array)[array_i ++] = fr_convert_to_value (frs_substr (calc, last_i, i));
+        (*array)[array_i ++] = fr_convert_to_value (kl_util_substr (calc, last_i, i));
 
         // Insert compute to float array
         (*array)[array_i ++] = VALUE_INT (calc[i]);
@@ -323,9 +323,9 @@ void _gna_conv_to_registry_boolean_algebra (Value** array, const char* calc, siz
     }
 
     // Insert value
-    (*array)[array_i ++] = fr_convert_to_value (frs_substr (calc, last_i, i));
+    (*array)[array_i ++] = fr_convert_to_value (kl_util_substr (calc, last_i, i));
 }
-#include <stdio.h>
+
 Value gna_registry_boolean_algebra (Registry** register_list, const char* calc, Value (*fr_convert_to_value) (char*))
 {
     size_t i, j, size;
@@ -350,14 +350,14 @@ Value gna_registry_boolean_algebra (Registry** register_list, const char* calc, 
 
         if (!has_found_term)
         {
-            alloc_value = fr_register_add (register_list, REGISTER_ALLOC (array[i - 1]));
+            alloc_value = kl_intp_register_add (register_list, REGISTER_ALLOC (array[i - 1]));
             array[i - 1] = POINTER (alloc_value);
             has_found_term = 1;
         }
 
         // Calculating mul or div depending on compute
         if (compute == '&')
-            fr_register_add (register_list, REGISTER_AND (VALUE_INT (alloc_value), array[i + 1]));
+            kl_intp_register_add (register_list, REGISTER_AND (VALUE_INT (alloc_value), array[i + 1]));
         else
             ; // TODO: Error!!! Unknown Compute!
 
@@ -372,13 +372,13 @@ Value gna_registry_boolean_algebra (Registry** register_list, const char* calc, 
     /** Calculating with OR ´|´ **/
 
     // Store first value as result -> Simpler to calculate with
-    size_t m_pos = fr_register_add (register_list, REGISTER_ALLOC (array[0]));
+    size_t m_pos = kl_intp_register_add (register_list, REGISTER_ALLOC (array[0]));
 
     // Sum of all values in float array
     for (i = 1; i < size; i += 2)
     {
         if ((intptr_t)array[i].value == '|')
-            fr_register_add (register_list, REGISTER_OR (VALUE_INT (m_pos), array[i + 1]));
+            kl_intp_register_add (register_list, REGISTER_OR (VALUE_INT (m_pos), array[i + 1]));
         else
             ; // TODO: Error!!! Unknown compute!
     }

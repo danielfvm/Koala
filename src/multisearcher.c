@@ -13,7 +13,6 @@
 
 #define CMS_CHECK(x, y) ((x & y) == y)
 
-
 // Temporary variable to set ´CmsSearch´ from ´cms_add´
 CmsTemplate* cms_tmp_template;
 
@@ -66,6 +65,11 @@ int cms_get_current_line_number ()
     return cms_line_number;
 }
 
+void cms_set_current_line_number (int line_number)
+{
+    cms_line_number = line_number;
+}
+
 
 void warning (const char* msg, const void* variablen, ...)
 {
@@ -81,7 +85,7 @@ void warning (const char* msg, const void* variablen, ...)
     arrow[i * 3 + 1] = '\0';
 
     char* line = cms_get_current_line ();
-    frs_trim (&line);
+    kl_util_trim (&line);
     fprintf (stderr, "\x1b[90m[\x1b[33m%d\x1b[90m]\x1b[92m─►\x1b[93m %s\n \x1b[92m└%s─► \x1b[95m(WARN) ", line_number, line, arrow);
     fprintf (stderr, msg, variablen);
     fprintf (stderr, "\x1b[0m\n");
@@ -107,32 +111,20 @@ void cms_find (const char* text, CmsTemplate* cms_template)
     text_size     = strlen (text);
 
     // Reset
-    cms_line = malloc (1);
-    cms_line[0] = '\0';
+    if (cms_line == NULL)
+    {
+        cms_line = malloc (1);
+        cms_line[0] = '\0';
+    }
+
+    size_t last_text_i = 0;
+    size_t text_char_i_begin = 0;
+
+    cms_line_number += 1;
 
     // Loop through string
     for (text_i = 0; text_i < text_size; ++ text_i)
     {
-        if (text_i == 0 || text[text_i] == '\n')
-        {
-            cms_line_number ++;
-
-            size_t next_endl;
-
-            for (next_endl = text_i + 1; text[next_endl] != '\n' && text[next_endl] != '\0'; ++ next_endl);
-
-            if (next_endl == text_i + 1)
-                strcpy (cms_line = malloc (1), "");
-            else
-            {
-                size_t len = next_endl - text_i + ((text_i == 0 && text[text_i] != '\n') ? 1 : 0);
-                cms_line = malloc (len);
-                for (size_t i = text_i + 1; i < text_i + len; ++ i)
-                    cms_line[i - text_i - 1] = text[i - ((text_i == 0 && text[text_i] != '\n') ? 1 : 0)];
-                cms_line[len-1] = '\0';
-            }
-        }
-
         // Loop through template's syntaxes
         for (template_i = 0; template_i < template_size; ++ template_i)
         {
@@ -153,12 +145,38 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                 template_char = template_syntax[template_syntax_i];
                 text_char     = text[text_char_i];
 
+                if (template_syntax_i == 0)
+                    text_char_i_begin = text_i;
+
                 // if ´template_char´ is end of string, the right syntax was found in ´text´
                 if (template_char == '\0')
                 {
+                    for (; last_text_i < text_char_i_begin; ++ last_text_i) if (text[last_text_i] == '\0' || text[last_text_i] == '\n')
+                    {
+                        cms_line_number ++;
+
+                        size_t next_endl;
+
+                        for (next_endl = last_text_i + 1; text[next_endl] != '\n' && text[next_endl] != '\0'; ++ next_endl);
+
+                        if (next_endl == last_text_i + 1)
+                            strcpy (cms_line = malloc (1), "");
+                        else
+                        {
+                            size_t len = next_endl - last_text_i + ((last_text_i == 0 && text[last_text_i] != '\n') ? 1 : 0);
+                            cms_line = realloc (cms_line, len);
+                            for (size_t i = last_text_i + 1; i < last_text_i + len; ++ i)
+                                cms_line[i - last_text_i - 1] = text[i - ((last_text_i == 0 && text[last_text_i] != '\n') ? 1 : 0)];
+                            cms_line[len-1] = '\0';
+                        }
+                    }
+
+
                     // Reached end of template's syntax
+                    int old_cms_line_number = cms_line_number;
                     if (cms_template->list[template_i].callback != NULL) 
                         cms_template->list[template_i].callback (data, template_data_size);
+                    cms_line_number = old_cms_line_number;
                     text_i = text_char_i - 1; // skip to last point found TODO: Add option for ´MULTIPLE_MODE´
                     break;
                 }
@@ -203,10 +221,10 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                         while (text[new_text_char_i] != template_syntax[i] && new_text_char_i < text_size)
                         {
                             if (text[new_text_char_i] == '\'' || text[new_text_char_i] == '"') 
-                                new_text_char_i = frs_find_string_end (new_text_char_i, text);
+                                new_text_char_i = kl_util_find_string_end (new_text_char_i, text);
                             else if ((text[new_text_char_i] == '('  || text[new_text_char_i] == '['  || text[new_text_char_i] == '{') 
                                     && CMS_CHECK (template_options, CMS_USE_BRACKET_SEARCH_ALGORITHM))
-                                new_text_char_i = frs_find_next_bracket (new_text_char_i, text);
+                                new_text_char_i = kl_util_find_next_bracket (new_text_char_i, text);
                             else
                                 new_text_char_i ++;
                         }
@@ -225,7 +243,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                     data_str[i] = '\0'; // end character
 
                     // Check if '#' has legall ascii charactors 
-                    if (template_char == '#' && (data_str[0] == '\0' || frs_has_illigal_ascii (data_str)))
+                    if (template_char == '#' && (data_str[0] == '\0' || kl_util_has_illigal_ascii (data_str)))
                         break; 
 
                     // Update ´text_char_i´ to keep on comparing the ´text´ with the given syntax

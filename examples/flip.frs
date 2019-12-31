@@ -1,0 +1,7 @@
+inc "examples/std.frs";
+
+flip (text) < forEdit (len (text) - 1, 0, STR, (i, edit_text) {
+    ~edit_text += text[i];
+});
+
+O: flip (read (STR)), '\n';

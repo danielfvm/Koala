@@ -1,0 +1,8 @@
+inc "examples/std.frs";
+
+countWords (text) < forEdit (0, len (text) - 1, INT, (i, counter) {
+    (text[i] <= ' ' & text[i + 1] > ' ') > ~counter += 1;
+    (text[i] > ' ' & i == 0) > ~counter += 1;
+});
+
+O: countWords (read (STR)), '\n';

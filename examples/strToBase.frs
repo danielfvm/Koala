@@ -1,0 +1,7 @@
+inc "examples/std.frs";
+
+strToBase (text, base) < forEdit (0, len (text) - 1, STR, (i, edit_text) {
+    ~edit_text += toBase (int (text[i]), base, base == 16 ? 2 : (base == 8 ? 3 : 8));
+});
+
+O: strToBase (read (STR), read (INT)), '\n';

@@ -1,29 +1,40 @@
 inc "examples/std.frs";
 
-flip (text) < forEdit (len (text) - 1, 0, STR, (i, edit_text) {
-    ~edit_text += text[i];
-});
+<* TODO: multi [][] *>
+<* do TODOs from code *>
+<* changing size *>
 
-nextASCII (text) < forEdit (0, len (text) - 1, STR, (i, edit_text) {
-    ~edit_text += text[i] + 1;
-});
-
-countWords (text) < forEdit (0, len (text) - 1, INT, (i, counter) {
-    (text[i] <= ' ' & text[i + 1] > ' ') > ~counter += 1;
-    (text[i] > ' ' & i == 0) > ~counter += 1;
-});
-
-strToBase (text, base) < forEdit (0, len (text) - 1, STR, (i, edit_text) {
-    ~edit_text += toBase (int (text[i]), base, base == 16 ? 2 : (base == 8 ? 3 : 8));
-});
-
-baseToStr (text, base) { 
-    val st = base == 16 ? 2 : (base == 8 ? 3 : 8);
-    ret forEdit (0, len (text) / st - 1, STR, (i, edit_text) {
-        ~edit_text += char (toNum (substr (text, i * st, i * st + st), base));
-    });
-}
+O: readFile ("examples/std.fros");
 
 <*
-O: strToBase (read (STR), read (INT)), '\n';
+var x = [12, 43];
+x += 3;
+O: x, '\n';
+*>
+
+<*
+div (x, y) < [x / y, x % y];
+
+O: (div (10, 2.0))[0];
+*>
+
+<*
+true -> {
+    var t = [3, 4, 6, 8];
+
+    O: t, '\n';
+    t = [2, 7];
+
+    O: t, '\n';
+}*>
+
+<* TODO: Fix malloc when list size changes *>
+<*
+cList (size, fill = 0) < forEdit (1, size, [], (i, list) {
+    ~list += fill;
+});
+
+var list = cList (3);
+
+O: list, '\n';
 *>

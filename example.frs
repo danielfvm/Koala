@@ -1,3 +1,5 @@
+<* Not Working *>
+
 player (name, x, y) {
     var health = 3;
 
@@ -6,23 +8,19 @@ player (name, x, y) {
         player.y = moveTo.y;
     }
 
-    isAlive () > alive;
+    isAlive () < alive;
 
-    getName () > player.name;
+    getName () < player.name;
 
     setX (x) > player.x = setX.x;
 
     setY (y) > player.y = setY.y;
 
-    respwan () {
-        O: "$player.name respawned!\n";
-    }
+    respwan () > O: "$player.name respawned!\n";
 
     damage () > alive --;
 
-    update () {
-        damage ();
-    }
+    update () > damage ();
 
     O: "$player.name spawnd!\n";
 
@@ -38,10 +36,8 @@ myPlayer > {
     moveTo (4, 2);
 };
 
-loop {
-    (myPlayer.isAlive ()) -> {
-         myPlayer.update ();
-    }
-    O: "$myPlayer.name died!\n";
+true -> {
+    (myPlayer.isAlive ()) -> myPlayer.update ();
+    O: "${myPlayer.name} died!\n";
 }
 

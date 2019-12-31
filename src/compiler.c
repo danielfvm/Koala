@@ -1,6 +1,7 @@
 #include "compiler.h"
 #include "multisearcher.h"
 #include "gnumber.h"
+#include "library.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -8,10 +9,16 @@
 #include <string.h>
 #include <math.h>
 
-void error (const char* msg, const void* variablen, ...)
+void error (const char* msg, ...)
 {
     int line_number = cms_get_current_line_number ();
     int nDigits = floor (log10 (abs (line_number))) + 1;
+
+    if (line_number <= 0)
+    {
+        printf ("Line Number cannot be 0 or smaller!\n");
+        exit (EXIT_FAILURE);
+    }
 
     char* arrow = malloc (nDigits * 3 + 1);
     size_t i;
@@ -22,14 +29,17 @@ void error (const char* msg, const void* variablen, ...)
     arrow[i * 3 + 1] = '\0';
 
     char* line = cms_get_current_line ();
-    frs_trim (&line);
+    kl_util_trim (&line);
+
+    va_list arg;
+    va_start (arg, msg);
 
     fprintf (stderr, "\x1b[90m[\x1b[33m%d\x1b[90m]\x1b[92m─►\x1b[93m %s\n \x1b[92m└%s─► \x1b[91m(ERR) ", line_number, line, arrow);
-    fprintf (stderr, msg, variablen);
+    vfprintf (stderr, msg, arg);
     fprintf (stderr, "\x1b[0m\n");
 
+    va_end (arg);
     free (arrow);
-    arrow = NULL;
 
     exit (EXIT_SUCCESS);
 }
@@ -37,25 +47,25 @@ void error (const char* msg, const void* variablen, ...)
 Registry* register_list = NULL;
 
 // Create ´register_list´ which is used to save the compiled commands
-void fr_compiler_init ()
+void kl_lex_compiler_init ()
 {
     if (register_list != NULL)
         free (register_list);
     register_list = NULL;
-    fr_register_create (&register_list);
+    kl_intp_register_create (&register_list);
 }
 
 // Run the saved commands in ´register_list´
-void fr_compiler_run ()
+void kl_lex_compiler_run ()
 {
-    fr_run (register_list);
+    kl_intp_run (register_list);
     free (register_list);
     register_list = NULL;
 }
 
-// in_function > 0 then fr_compile is in a ´function´
-// in_function = 0 then fr_compile is in ´main´
-// in_function < 0 then fr_compile is in ´scope´
+// in_function > 0 then kl_lex_compile is in a ´function´
+// in_function = 0 then kl_lex_compile is in ´main´
+// in_function < 0 then kl_lex_compile is in ´scope´
 int in_function = 0;
 
 // Used to set variable name;
@@ -65,7 +75,7 @@ char* function_path = NULL; // local.
 size_t scope_jump_back[100];
 size_t scope_jump_back_size = 0;
 
-void fr_add_variable (Variable** variables, size_t* variable_count, const char* path, const char* name, const bool constant, Value value)
+void kl_lex_add_variable (Variable** variables, size_t* variable_count, const char* path, const char* name, const bool constant, Value value)
 {
     if (name[0] == '\0')
         error ("Variable Name has to be at least 1 char long!", NULL);
@@ -82,7 +92,7 @@ void fr_add_variable (Variable** variables, size_t* variable_count, const char* 
     if (!(*variables))
         error ("Failed to add new variable ´%s´ to variables, ´realloc´ failed!", name);
 
-    (*variables)[*variable_count].position = fr_register_add (&register_list, REGISTER_ALLOC (value));
+    (*variables)[*variable_count].position = kl_intp_register_add (&register_list, REGISTER_ALLOC (value));
     (*variables)[*variable_count].constant = constant;
     strcpy ((*variables)[*variable_count].name = malloc (strlen (name) + 1), name);
     strcpy ((*variables)[*variable_count].function_path = malloc (strlen (path) + 1), path); 
@@ -91,19 +101,19 @@ void fr_add_variable (Variable** variables, size_t* variable_count, const char* 
 }
 
 // Here the code will be compiled into a list of registers -> ´register_list´
-int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, const bool reset_variables)
+int kl_lex_compile (char* code, Variable** variables, size_t* pre_variable_count, const bool reset_variables)
 {
     if (!code || !variables)
         return EXIT_SUCCESS;
 
-    // Filter comments out of code -> TODO: Move comment out of ´fr_compile´ -> performance
-    frs_filter_comment (&code);
+    // Filter comments out of code -> TODO: Move comment out of ´kl_lex_compile´ -> performance
+    kl_util_filter_comment (&code);
 
-    // Add ´local.´ to function_path if ´fr_compile´ is main
+    // Add ´local.´ to function_path if ´kl_lex_compile´ is main
     if (!function_path)
         strcpy (function_path = malloc (strlen ("local") + 1), "local");
 
-    // Used to reset ´variables´ back to normal size at the end of ´fr_compile´
+    // Used to reset ´variables´ back to normal size at the end of ´kl_lex_compile´
     size_t variable_count = *pre_variable_count;
 
     // Template storing syntax, used for the CMultiSearcher
@@ -112,7 +122,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
     // Returns the index of variable by given name
     int var_get_pos_by_name (char* name, bool wants_to_modify)
     {
-        frs_ctrim (&name);
+        kl_util_ctrim (&name);
 
         Variable variable;
         char* full_var_name;
@@ -197,6 +207,10 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             if (!strcmp ((*variables)[i].name, name) && !strcmp ((*variables)[i].function_path, path) && strcmp ((*variables)[i].name, "__origin__"))
                 error ("Variable ´%s´ already exists in this scope!", name);
 
+        if (kl_lib_get_function_by_name (name) != UNKNOWN)
+            error ("Function ´%s´ already exists in library!", name);
+            
+
         (*variables) = realloc (*variables, sizeof (Variable) * (variable_count + 1));
 
         if (!(*variables))
@@ -219,9 +233,9 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
     // Doesn't work with ´\´ and ´\\´
     // Used for special string inserts example: "${}" or "$VARIABLE"
-    Value create_filled_in_str (char* text, Value (fr_convert_to_value) (char* text))
+    Value create_filled_in_str (char* text, Value (kl_lex_convert_to_value) (char* text))
     {
-        text = frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (text, "\\\\", "$/638$"), "\\\"", "\""), "\\r", "\r"), "\\t", "\t"), "\\x1b", "\x1b"), "\\n", "\n"), "$/638$", "\\");
+        text = kl_util_str_replace (kl_util_str_replace (kl_util_str_replace (kl_util_str_replace (kl_util_str_replace (kl_util_str_replace (kl_util_str_replace (text, "\\\\", "$/638$"), "\\\"", "\""), "\\r", "\r"), "\\t", "\t"), "\\x1b", "\x1b"), "\\n", "\n"), "$/638$", "\\");
 
         bool   has_variables = 0;
         size_t m_index, i, j;
@@ -240,19 +254,19 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
             if (text[i + 1] == '{')
             {
-                int last_bracket = frs_find_next_bracket (++ i, text);
+                int last_bracket = kl_util_find_next_bracket (++ i, text);
 
                 if (!has_variables)
                 {
-                    m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_STR ("")));
+                    m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_STR ("")));
                     has_variables = 1;
                 }
 
                 text[i - 1] = '\0';
                 text[i] = '\0';
 
-                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
-                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), fr_convert_to_value (frs_substr (text+i+1, 0, last_bracket - i - 1))));
+                kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
+                kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), kl_lex_convert_to_value (kl_util_substr (text+i+1, 0, last_bracket - i - 1))));
 
                 text += last_bracket + 1;
                 i = -1;
@@ -267,7 +281,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
                     if (cvar[0] == '\0' || strlen (cvar) > strlen (text + i + 1))
                         continue;
-                    tvar = frs_substr (text, i + 1, i + 1 + strlen (cvar));
+                    tvar = kl_util_substr (text, i + 1, i + 1 + strlen (cvar));
                     if (!strcmp (cvar, tvar) && strlen (varname) < strlen (cvar))
                         varname = cvar;
                     free (tvar);
@@ -279,14 +293,14 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
                 if (!has_variables)
                 {
-                    m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_STR ("")));
+                    m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_STR ("")));
                     has_variables = 1;
                 }
 
                 text[i] = '\0';
 
-                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
-                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), POINTER (var_get_pos_by_name (varname, false))));
+                kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
+                kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), POINTER (var_get_pos_by_name (varname, false))));
 
                 text += i + 1 + strlen (varname);
                 i = -1;
@@ -296,23 +310,55 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         if (has_variables)
         {
             if (text[0] != '\0')
-                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
+                kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), VALUE_STR (text)));
             return POINTER (m_index);
         }
         return VALUE_STR (text);
     }
 
+    Value call_lib_function (int id, char* func_args, Value (kl_lex_convert_to_value) (char* text))
+    {
+        if (id == UNKNOWN)
+            return VALUE_INT (0);
+
+        size_t m_index_ret = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+
+        char** args = NULL;
+        size_t args_length = kl_util_split (func_args, ',', &args);
+
+        Value* args_values = malloc (sizeof (Value) * args_length);
+
+        for (size_t i = 0; i < args_length; ++  i)
+            args_values[i] = kl_lex_convert_to_value (args[i]);
+
+        if (args != NULL)
+            free (args);
+
+        kl_intp_register_add (&register_list, REGISTER_LIB_FUNC (
+            VALUE_INT (id),
+            VALUE_INT (m_index_ret),
+            VALUE_LIST (args_values, args_length)
+        ));
+
+        return POINTER (m_index_ret);
+    }
 
     // TODO: WRONG POSITION FOR ARGUMENTS
-    Value create_call_function (char* func_name, char* func_args, Value (fr_convert_to_value) (char* text))
+    Value create_call_function (char* func_name, char* func_args, Value (kl_lex_convert_to_value) (char* text))
     {
+        int kl_lib_id = UNKNOWN;
+
+        // Check if function exist
+        if ((kl_lib_id = kl_lib_get_function_by_name (func_name)) != UNKNOWN)
+            return call_lib_function (kl_lib_id, func_args, kl_lex_convert_to_value);
+
         char** args;
         size_t length = 0; 
 
         if (func_args != NULL && func_args[0] != '\0')
-            length = frs_split (func_args, ',', &args);
+            length = kl_util_split (func_args, ',', &args);
 
-        Value position = fr_convert_to_value (func_name); 
+        Value position = kl_lex_convert_to_value (func_name); 
 
         size_t m_tmp_var;
 
@@ -322,34 +368,34 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         // Arguments passed over call
         for (size_t i = 0; i < length; ++ i) 
         {
-            func_args_positions[i] = m_tmp_var = fr_register_add (&register_list, REGISTER_ALLOC (position));
-            fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_tmp_var), VALUE_INT (i + 2)));
-            fr_register_add (&register_list, REGISTER_PUSH (POINTER_POINTER (m_tmp_var))); // pushes variable to stack, used later to reset variable
-            func_args_values[i] = fr_register_add (&register_list, REGISTER_ALLOC (fr_convert_to_value (args[i])));
+            func_args_positions[i] = m_tmp_var = kl_intp_register_add (&register_list, REGISTER_ALLOC (position));
+            kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_tmp_var), VALUE_INT (i + 2)));
+            kl_intp_register_add (&register_list, REGISTER_PUSH (POINTER_POINTER (m_tmp_var))); // pushes variable to stack, used later to reset variable
+            func_args_values[i] = kl_intp_register_add (&register_list, REGISTER_ALLOC (kl_lex_convert_to_value (args[i])));
         }
 
         for (size_t i = 0; i < length; ++ i)
-            fr_register_add (&register_list, REGISTER_SSET (POINTER (func_args_positions[i]), POINTER (func_args_values[i])));
+            kl_intp_register_add (&register_list, REGISTER_SSET (POINTER (func_args_positions[i]), POINTER (func_args_values[i])));
 
         // Argument for location of call ´__origin__´
-        size_t m_tmp = fr_register_add (&register_list, REGISTER_ALLOC (position));
-        fr_register_add (&register_list, REGISTER_PUSH (POINTER_POINTER (m_tmp))); // pushes variable to stack, used later to reset variable
-        fr_register_add (&register_list, REGISTER_SSET (POINTER (m_tmp), VALUE_INT (fr_get_current_register_position (&register_list) + 2)));
+        size_t m_tmp = kl_intp_register_add (&register_list, REGISTER_ALLOC (position));
+        kl_intp_register_add (&register_list, REGISTER_PUSH (POINTER_POINTER (m_tmp))); // pushes variable to stack, used later to reset variable
+        kl_intp_register_add (&register_list, REGISTER_SSET (POINTER (m_tmp), VALUE_INT (kl_intp_get_current_register_position (&register_list) + 2)));
 
         // Calling jump
-        fr_register_add (&register_list, REGISTER_JUMP (position));
+        kl_intp_register_add (&register_list, REGISTER_JUMP (position));
 
         // pops old variable __origin__ from stack 
-        fr_register_add (&register_list, REGISTER_POP (POINTER (m_tmp)));
+        kl_intp_register_add (&register_list, REGISTER_POP (POINTER (m_tmp)));
 
         // pops variable to stack, used later to reset variable
         for (int i = length - 1; i >= 0; -- i) 
-            fr_register_add (&register_list, REGISTER_POP (POINTER (func_args_positions[i])));
+            kl_intp_register_add (&register_list, REGISTER_POP (POINTER (func_args_positions[i])));
 
         // Return value
-        m_tmp_var = fr_register_add (&register_list, REGISTER_ALLOC (position));
-        fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_tmp_var), VALUE_INT (1)));
-        m_tmp_var = fr_register_add (&register_list, REGISTER_ALLOC (POINTER_POINTER (m_tmp_var)));
+        m_tmp_var = kl_intp_register_add (&register_list, REGISTER_ALLOC (position));
+        kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_tmp_var), VALUE_INT (1)));
+        m_tmp_var = kl_intp_register_add (&register_list, REGISTER_ALLOC (POINTER_POINTER (m_tmp_var)));
 
         return POINTER (m_tmp_var);
     }
@@ -364,7 +410,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             || !strcmp (name, "inc");
     }
 
-    Value create_function (char* func_name, char* func_args, char* func_code, Value (fr_convert_to_value) (char* text))
+    Value create_function (char* func_name, char* func_args, char* func_code, Value (kl_lex_convert_to_value) (char* text))
     {
         char** args;
         char*  var__origin__;
@@ -390,25 +436,25 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         
 
         // Allocate memory for function position
-        Value  value_func_position = VALUE_INT (fr_get_current_register_position (&register_list) + 2);
-        size_t func_pos = fr_register_add (&register_list, REGISTER_ALLOC (value_func_position));
+        Value  value_func_position = VALUE_INT (kl_intp_get_current_register_position (&register_list) + 2);
+        size_t func_pos = kl_intp_register_add (&register_list, REGISTER_ALLOC (value_func_position));
 
         if (func_name != NULL)
             var_add_function_path (old_function_path, func_name, func_pos, false);
 
         // Jump to end of functions body, will not happen if function is called
-        size_t x = fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (-1)));
+        size_t x = kl_intp_register_add (&register_list, REGISTER_JUMP (VALUE_INT (-1)));
 
         // first default argument, ´__origin__´ used to determine where to go back
         sprintf (var__origin__ = malloc (10 + 1), "__origin__");
-        var_add (var__origin__, fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (-1))), false);
+        var_add (var__origin__, kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (-1))), false);
 
         // Allocate memory for function return
-        fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+        kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
 
-        // frs_split arguments of function
+        // kl_util_split arguments of function
         if (func_args[0] != '\0')
-            length = frs_split (func_args, ',', &args);
+            length = kl_util_split (func_args, ',', &args);
 
         Value  m_value;
         size_t equal_pos;
@@ -416,31 +462,31 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         // recieved parameters
         for (size_t i = 0; i < length; ++ i) 
         {
-            // check if frs_contains an ´=´
-            if (equal_pos = frs_contains (args[i], '='))
+            // check if kl_util_contains an ´=´
+            if (equal_pos = kl_util_contains (args[i], '='))
             {
                 args[i][equal_pos - 1] = '\0';
-                m_value = fr_convert_to_value (args[i] + equal_pos); // - 1
-                frs_ctrim (&args[i]);
-                var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (m_value)), false);
+                m_value = kl_lex_convert_to_value (args[i] + equal_pos); // - 1
+                kl_util_ctrim (&args[i]);
+                var_add (args[i], kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value)), false);
             }
             else
             {
-                var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))), false);
+                var_add (args[i], kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))), false);
             }
         }
 
         // Compile function body
         int old_in_function = in_function;
         in_function = func_pos;
-        fr_compile (func_code, variables, &variable_count, true);
+        kl_lex_compile (func_code, variables, &variable_count, true);
         in_function = old_in_function;
          
         // Jump to call position (location of call saved in ´__origin__´)
-        fr_register_add (&register_list, REGISTER_JUMP (fr_convert_to_value (var__origin__)));
+        kl_intp_register_add (&register_list, REGISTER_JUMP (kl_lex_convert_to_value (var__origin__)));
 
         // Set skip jump to current location of register
-        register_list[x]->reg_values[0] = VALUE_INT (fr_get_current_register_position(&register_list));
+        register_list[x]->reg_values[0] = VALUE_INT (kl_intp_get_current_register_position(&register_list));
  
         // Remove from function_path
         if (func_name != NULL)
@@ -454,29 +500,50 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
     }
 
     // Converts a code-string to ´Value´, it can recognise different datatypes of Values
-    Value fr_convert_to_value (char* text)
+    Value kl_lex_convert_to_value (char* text)
     {
         // Trim text begin & end
-        frs_trim (&text);
+        kl_util_trim (&text);
 
         // Remove brackets if outside is bracket
-        if (text[0] == '(' && strlen (text) == frs_find_next_bracket (0, text) + 1)
+        if (text[0] == '(' && strlen (text) == kl_util_find_next_bracket (0, text) + 1)
         {
             text[strlen (text ++) - 1] = '\0'; // remove start & end bracket
-            frs_trim (&text);
+            kl_util_trim (&text);
+        }
+
+        // Create list
+        if (text[0] == '[' && strlen (text) == kl_util_find_next_bracket (0, text) + 1)
+        {
+            text[strlen (text ++) - 1] = '\0'; // remove start & end bracket
+            kl_util_trim (&text);
+
+            char** args = NULL;
+            size_t length = kl_util_split (text, ',', &args);
+
+            Value* values = malloc (sizeof (Value) * length);
+
+            for (size_t i = 0; i < length; ++  i)
+                values[i] = kl_lex_convert_to_value (args[i]);
+
+            if (args != NULL)
+                free (args);
+
+            int m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_LIST (values, length)));
+            return POINTER (m_index);
         }
 
         // scope
-        if (text[0] == '{' && strlen (text) == frs_find_next_bracket (0, text) + 1) 
+        if (text[0] == '{' && strlen (text) == kl_util_find_next_bracket (0, text) + 1) 
         {
             text[strlen (text ++) - 1] = '\0'; // remove start & end bracket
-            int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))); // alloc memory for return
+            int m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))); // alloc memory for return
             int old_in_function = in_function;
             in_function = -m_index; // store old ´in_function´ and set new one (neg used for ´scope´ in ret)
 
-            fr_compile (text, variables, &variable_count, true); // compile code in bracket
+            kl_lex_compile (text, variables, &variable_count, true); // compile code in bracket
 
-            Value value_current_reg_pos = VALUE_INT (fr_get_current_register_position (&register_list)); 
+            Value value_current_reg_pos = VALUE_INT (kl_intp_get_current_register_position (&register_list)); 
             for (byte i = 0; i < scope_jump_back_size; ++ i)
                 register_list[scope_jump_back[i]]->reg_values[0] = value_current_reg_pos;
             scope_jump_back_size = 0;
@@ -492,50 +559,58 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             return VALUE_INT (false);
 
         // short if 
-        bool is_if   = frs_contains (text, '?');
-        bool is_else = frs_contains (text, ':');
+        bool is_if   = kl_util_contains (text, '?');
+        bool is_else = kl_util_contains (text, ':');
 
         if (is_if && is_else)
         {
             text[is_if - 1] = '\0';    // set '\0' at '?'
             text[is_else  - 1] = '\0'; // set '\0' at ':'
-            Value val_condition = fr_convert_to_value (text); // create value for condition
+            Value val_condition = kl_lex_convert_to_value (text); // create value for condition
 
-            size_t m_index = fr_register_add (&register_list, REGISTER_ALLOC (val_condition)); // alloc memory for return
+            size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (val_condition)); // alloc memory for return
 
-            size_t x = fr_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0))); // condition if
+            size_t x = kl_intp_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0))); // condition if
             {
-                fr_register_add (&register_list, REGISTER_SET (VALUE_INT (m_index), fr_convert_to_value (text += is_if))); // set memory value if true
+                kl_intp_register_add (&register_list, REGISTER_SET (VALUE_INT (m_index), kl_lex_convert_to_value (text += is_if))); // set memory if true
             }
-            size_t y = fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (0))); // condition else
-            register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list)); // set ´condition if´ jump point
+            size_t y = kl_intp_register_add (&register_list, REGISTER_JUMP (VALUE_INT (0))); // condition else
+            register_list[x]->reg_values[2] = VALUE_INT (kl_intp_get_current_register_position (&register_list)); // set ´condition if´ jump point
             {
-                fr_register_add (&register_list, REGISTER_SET (VALUE_INT (m_index), fr_convert_to_value (text += is_else - is_if))); // set memory value if false
+                kl_intp_register_add (&register_list, REGISTER_SET (VALUE_INT (m_index), kl_lex_convert_to_value (text += is_else - is_if))); // set memory value if false
             }
-            register_list[y]->reg_values[0] = VALUE_INT (fr_get_current_register_position (&register_list)); // set ´condition else´ jump point
+            register_list[y]->reg_values[0] = VALUE_INT (kl_intp_get_current_register_position (&register_list)); // set ´condition else´ jump point
 
             return POINTER (m_index); // return pointer of memory
         }
 
         // boolean algebra
-        if (frs_contains (text, '&') || frs_contains (text, '|'))
-            return gna_registry_boolean_algebra (&register_list, text, fr_convert_to_value);
+        if (kl_util_contains (text, '&') || kl_util_contains (text, '|'))
+            return gna_registry_boolean_algebra (&register_list, text, kl_lex_convert_to_value);
 
-        size_t is_bigger  = frs_contains (text, '>'); // >,  >=
-        size_t is_smaller = frs_contains (text, '<'); // <,  <=
-        size_t is_equal   = frs_contains (text, '='); // ==, !=
-        size_t is_pow     = frs_contains (text, '^'); // ==, !=
+        size_t is_point = kl_util_contains (text, '.');
+
+        if (is_point && text[is_point] == '.')
+        {
+            char* from = kl_util_substr (text, 0, is_point - 1);
+            char* to   = kl_util_substr (text, is_point + 1, strlen (text) - 1);
+        }
+
+        size_t is_bigger  = kl_util_contains (text, '>'); // >,  >=
+        size_t is_smaller = kl_util_contains (text, '<'); // <,  <=
+        size_t is_equal   = kl_util_contains (text, '='); // ==, !=
+        size_t is_pow     = kl_util_contains (text, '^'); // ==, !=
 
         char* v1_text = NULL; // condition before compute
         char* v2_text = NULL; // condition after  compute
 
         if (is_pow)
         {
-            v1_text = frs_substr (text, 0, is_pow - 1);
-            v2_text = frs_substr (text, is_pow, strlen (text));
+            v1_text = kl_util_substr (text, 0, is_pow - 1);
+            v2_text = kl_util_substr (text, is_pow, strlen (text));
 
-            int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_FLOAT (0)));
-            fr_register_add (&register_list, REGISTER_POW (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
+            int m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_FLOAT (0)));
+            kl_intp_register_add (&register_list, REGISTER_POW (kl_lex_convert_to_value (v1_text), kl_lex_convert_to_value (v2_text), VALUE_INT (m_index)));
 
             free (v1_text);
             free (v2_text);
@@ -544,11 +619,11 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         }
         else if (is_bigger)
         {
-            v1_text = frs_substr (text, 0, is_bigger - 1);
-            v2_text = frs_substr (text, is_bigger + (text[is_bigger] == '=' ? 1 : 0), strlen (text));
+            v1_text = kl_util_substr (text, 0, is_bigger - 1);
+            v2_text = kl_util_substr (text, is_bigger + (text[is_bigger] == '=' ? 1 : 0), strlen (text));
 
-            int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
-            fr_register_add (&register_list, (text[is_bigger] == '=' ? REGISTER_BEQ : REGISTER_BIG) (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
+            int m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+            kl_intp_register_add (&register_list, (text[is_bigger] == '=' ? REGISTER_BEQ : REGISTER_BIG) (kl_lex_convert_to_value (v1_text), kl_lex_convert_to_value (v2_text), VALUE_INT (m_index)));
 
             free (v1_text);
             free (v2_text);
@@ -557,11 +632,11 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         }
         else if (is_smaller)
         {
-            v1_text = frs_substr (text, 0, is_smaller - 1);
-            v2_text = frs_substr (text, is_smaller + (text[is_smaller] == '=' ? 1 : 0), strlen (text));
+            v1_text = kl_util_substr (text, 0, is_smaller - 1);
+            v2_text = kl_util_substr (text, is_smaller + (text[is_smaller] == '=' ? 1 : 0), strlen (text));
 
-            int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
-            fr_register_add (&register_list, (text[is_smaller] == '=' ? REGISTER_SEQ : REGISTER_SMA) (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
+            int m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+            kl_intp_register_add (&register_list, (text[is_smaller] == '=' ? REGISTER_SEQ : REGISTER_SMA) (kl_lex_convert_to_value (v1_text), kl_lex_convert_to_value (v2_text), VALUE_INT (m_index)));
 
             free (v1_text);
             free (v2_text);
@@ -570,19 +645,19 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         }
         else if (is_equal && (text[is_equal - 2] == '+' || text[is_equal - 2] == '-' || text[is_equal - 2] == '*' || text[is_equal - 2] == '/'))
         {
-            v1_text = frs_substr (text, 0, is_equal - 2);
-            v2_text = frs_substr (text, is_equal, strlen (text));
+            v1_text = kl_util_substr (text, 0, is_equal - 2);
+            v2_text = kl_util_substr (text, is_equal, strlen (text));
 
             size_t m_index = var_get_pos_by_name (v1_text, true); 
 
             if (text[is_equal - 2] == '+')
-                fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), fr_convert_to_value (v2_text)));
+                kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_index), kl_lex_convert_to_value (v2_text)));
             else if (text[is_equal - 2] == '-')
-                fr_register_add (&register_list, REGISTER_SUB (VALUE_INT (m_index), fr_convert_to_value (v2_text)));
+                kl_intp_register_add (&register_list, REGISTER_SUB (VALUE_INT (m_index), kl_lex_convert_to_value (v2_text)));
             else if (text[is_equal - 2] == '*')
-                fr_register_add (&register_list, REGISTER_MUL (VALUE_INT (m_index), fr_convert_to_value (v2_text)));
+                kl_intp_register_add (&register_list, REGISTER_MUL (VALUE_INT (m_index), kl_lex_convert_to_value (v2_text)));
             else if (text[is_equal - 2] == '/')
-                fr_register_add (&register_list, REGISTER_DIV (VALUE_INT (m_index), fr_convert_to_value (v2_text)));
+                kl_intp_register_add (&register_list, REGISTER_DIV (VALUE_INT (m_index), kl_lex_convert_to_value (v2_text)));
 
             free (v1_text);
             free (v2_text);
@@ -591,11 +666,11 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         }
         else if (is_equal && (text[is_equal] == '=' || text[(is_equal -= 1) - 1] == '!'))
         {
-            v1_text = frs_substr (text, 0, is_equal - 1);
-            v2_text = frs_substr (text, is_equal + 1, strlen (text));
+            v1_text = kl_util_substr (text, 0, is_equal - 1);
+            v2_text = kl_util_substr (text, is_equal + 1, strlen (text));
 
-            int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
-            fr_register_add (&register_list, (text[is_equal-1] == '=' ? REGISTER_EQ : REGISTER_NEQ) (fr_convert_to_value (v1_text), fr_convert_to_value (v2_text), VALUE_INT (m_index)));
+            int m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+            kl_intp_register_add (&register_list, (text[is_equal-1] == '=' ? REGISTER_EQ : REGISTER_NEQ) (kl_lex_convert_to_value (v1_text), kl_lex_convert_to_value (v2_text), VALUE_INT (m_index)));
 
             free (v1_text);
             free (v2_text);
@@ -603,15 +678,15 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             return POINTER (m_index);
         }
 
-        if (!frs_is_str_concat (text)) // ´text´ is a ´string´
+        if (!kl_util_is_str_concat (text)) // ´text´ is a ´string´
         {
             text[strlen (text ++) - 1] = '\0'; // Remove last ´"´
-            return create_filled_in_str(text, fr_convert_to_value);
+            return create_filled_in_str(text, kl_lex_convert_to_value);
         }
         else if ((text[0] == '\'' && text[strlen (text) - 1] == '\'') && strlen (text) <= 6) // ´text´ is a ´char´
         {
             text[strlen (text ++) - 1] = '\0'; // Remove last ´'´
-            return VALUE_CHAR (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (frs_str_replace (text, "\\\\", "$/638$"), "\\'", "'"), "\\r", "\r"), "\\t", "\t"), "\\x1b", "\x1b"), "\\n", "\n"), "$/638$", "\\"), "\\'", "'")[0]);
+            return VALUE_CHAR (kl_util_str_replace (kl_util_str_replace (kl_util_str_replace (kl_util_str_replace (kl_util_str_replace (kl_util_str_replace (kl_util_str_replace (kl_util_str_replace (text, "\\\\", "$/638$"), "\\'", "'"), "\\r", "\r"), "\\t", "\t"), "\\x1b", "\x1b"), "\\n", "\n"), "$/638$", "\\"), "\\'", "'")[0]);
         }
 
         // Check if text is a ´int´ or ´float´
@@ -649,53 +724,65 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             return VALUE_FLOAT (atof (text));
 
         // calculation with ´+/-*
-        if (frs_contains (text, '+') || frs_contains (text, '-') || frs_contains (text, '*') || frs_contains (text, '/') || frs_contains (text, '%'))
-            return gna_registry_calculation_simple (&register_list, text, fr_convert_to_value);
+        if (kl_util_contains (text, '+') || 
+            kl_util_contains (text, '-') || 
+            kl_util_contains (text, '*') || 
+            kl_util_contains (text, '/') || 
+            kl_util_contains (text, '%'))
+                return gna_registry_calculation_simple (&register_list, text, kl_lex_convert_to_value);
 
         // Function call
         size_t func_end_name = 0;
 
-        if ((func_end_name = frs_contains (text, '(')) && func_end_name > 1 && strlen (text) == frs_find_next_bracket (func_end_name - 1, text) + 1)
+        if ((func_end_name = kl_util_contains (text, '(')) && 
+            (func_end_name > 1) && 
+            (strlen (text) == kl_util_find_next_bracket (func_end_name - 1, text) + 1))
         {
             // function name
             char* func_name = malloc (strlen (text) + 1);
             strcpy (func_name, text);
             func_name[func_end_name - 1] = '\0';
             func_name = realloc (func_name, func_end_name);
-            frs_trim (&func_name);
+            kl_util_trim (&func_name);
 
             // function arguments
             char* func_args = malloc (strlen (text) + 1);
             strcpy (func_args, text + func_end_name);
             func_args[strlen (text) - func_end_name - 1] = '\0';
             func_args = realloc (func_args, strlen (text) - func_end_name);
-            frs_trim (&func_args);
+            kl_util_trim (&func_args);
+
+            int kl_lib_id = UNKNOWN;
 
             // Check if function exist
             if (var_get_pos_by_name (func_name, false) != -1)
-                return create_call_function (func_name, func_args, fr_convert_to_value);
+                return create_call_function (func_name, func_args, kl_lex_convert_to_value);
+            else if ((kl_lib_id = kl_lib_get_function_by_name (func_name)) != UNKNOWN)
+                return call_lib_function (kl_lib_id, func_args, kl_lex_convert_to_value);
         }
 
         // Lambda
         size_t func_args_end;
         size_t func_code_begin, func_code_end;
 
-        if (text[0] == '(' && (func_args_end = frs_find_next_bracket (0, text)) != -1 && func_end_name < strlen (text) && 
-                (func_code_begin = frs_contains (text, '{') - 1) != -1 && strlen (text) == (func_code_end = frs_find_next_bracket (func_code_begin, text)) + 1)
+        if ((text[0] == '(') && 
+            ((func_args_end = kl_util_find_next_bracket (0, text)) != -1) && /*func_end_name < strlen (text) && */
+            ((func_code_begin = kl_util_contains (text, '{') - 1) != -1) && 
+            (strlen (text) == (func_code_end = kl_util_find_next_bracket (func_code_begin, text)) + 1))
         {
             // funcation arguments
             char* func_args = malloc (strlen (text) + 1);
             strcpy (func_args, text + 1);
             func_args[func_args_end - 1] = '\0';
             func_args = realloc (func_args, func_args_end);
-            frs_trim (&func_args);
+            kl_util_trim (&func_args);
 
             // function code
             char* func_code = malloc (strlen (text) + 1);
             strcpy (func_code, text + func_code_begin + 1);
             func_code[func_code_end - func_code_begin - 1] = '\0';
             func_code = realloc (func_code, func_code_end - func_code_begin);
-            frs_trim (&func_code);
+            kl_util_trim (&func_code);
 
             // function/lambda name
             static size_t lambda_count = 0;
@@ -705,7 +792,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
             sprintf (lambda_name, "l%d", lambda_count);
             lambda_name = realloc (lambda_name, strlen (lambda_name) + 1);
 
-            return create_function (lambda_name, func_args, func_code, fr_convert_to_value);
+            return create_function (lambda_name, func_args, func_code, kl_lex_convert_to_value);
         }
 
         // returns value of variable -> ´pointer´
@@ -718,17 +805,16 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         {
             char* tmp_text = malloc (strlen (text));
             strcpy (tmp_text, text + 1);
-        
-            frs_trim (&tmp_text);
+            kl_util_trim (&tmp_text);
             
             if (text[0] == '!')
             {
-                size_t x = fr_register_add (&register_list, REGISTER_ALLOC (fr_convert_to_value (tmp_text)));
-                fr_register_add (&register_list, REGISTER_NEG (VALUE_INT (x)));
+                size_t x = kl_intp_register_add (&register_list, REGISTER_ALLOC (kl_lex_convert_to_value (tmp_text)));
+                kl_intp_register_add (&register_list, REGISTER_NEG (VALUE_INT (x)));
                 return POINTER (x);
             }
             else if (text[0] == '~')
-                return POINTER_POINTER (fr_register_add (&register_list, REGISTER_ALLOC (fr_convert_to_value (tmp_text))));
+                return POINTER_POINTER (kl_intp_register_add (&register_list, REGISTER_ALLOC (kl_lex_convert_to_value (tmp_text))));
             else if (text[0] == '$' && (var_position = var_get_pos_by_name (tmp_text, false)) != -1)
                 return VALUE_INT (var_position);
         }
@@ -737,17 +823,46 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         size_t bracket_index_close;
 
         // returns value/pointer using index of string -> ´char´
-        if ((bracket_index_open = frs_contains (text, '[')) != 0 && (bracket_index_close = frs_find_next_bracket (bracket_index_open - 1, text)) != -1)
+        if (((bracket_index_open = kl_util_contains (text, '[')) != 0) && 
+            ((bracket_index_close = kl_util_find_next_bracket (bracket_index_open - 1, text)) != -1))
         {
-            char old_char = text[bracket_index_open - 1] = '\0';
-            if ((var_position = var_get_pos_by_name (text, false)) == -1)
-                error ("Variable ´%s´ does not exist in this scope!\n", text);
-            text[bracket_index_open - 1] = old_char;
+            char old_char = text[bracket_index_open - 1];
+            text[bracket_index_open - 1] = '\0';
+            if ((var_position = var_get_pos_by_name (text, false)) != -1)
+            {
+                text[bracket_index_open - 1] = old_char;
 
-            text[bracket_index_close] = '\0';
-            text += bracket_index_open;
-            size_t i = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
-            fr_register_add (&register_list, REGISTER_IND (VALUE_INT (i), POINTER (var_position), fr_convert_to_value (text)));
+                text[bracket_index_close] = '\0';
+                text += bracket_index_open;
+                size_t i = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+                kl_intp_register_add (&register_list, REGISTER_IND (VALUE_INT (i), POINTER (var_position), kl_lex_convert_to_value (text)));
+                return POINTER (i);
+            }
+            text[bracket_index_open - 1] = old_char;
+        }
+
+        size_t var_list_end;
+        size_t var_index_begin, var_index_end;
+
+        if ((text[0] == '(') && 
+            ((var_list_end = kl_util_find_next_bracket (0, text)) != -1) && 
+            ((var_index_begin = kl_util_contains (text + var_list_end, '[') + var_list_end - 1) != -1) && 
+            (strlen (text) == (var_index_end = kl_util_find_next_bracket (var_index_begin, text)) + 1))
+        {
+            // Variable list
+            char* var_list = malloc (strlen (text) + 1);
+            strcpy (var_list, text + 1);
+            var_list[var_list_end - 1] = '\0';
+            var_list = realloc (var_list, var_list_end);
+
+            // Variable index
+            char* var_index = malloc (strlen (text) + 1);
+            strcpy (var_index, text + var_index_begin + 1);
+            var_index[var_index_end - var_index_begin - 1] = '\0';
+            var_index = realloc (var_index, var_index_end - var_index_begin);
+
+            size_t i = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+            kl_intp_register_add (&register_list, REGISTER_IND (VALUE_INT (i), kl_lex_convert_to_value (var_list), kl_lex_convert_to_value (var_index)));
             return POINTER (i);
         }
 
@@ -755,10 +870,10 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         error ("Variable ´%s´ does not exist in this scope!\n", text);
     }
 
-    void fr_do_alloc (char* values, bool constant)
+    void kl_lex_do_alloc (char* values, bool constant)
     {
         char** args;
-        size_t length = frs_split (values, ',', &args);
+        size_t length = kl_util_split (values, ',', &args);
         size_t equal_pos;
 
         Value  m_value;
@@ -766,66 +881,66 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
         // recieved parameters
         for (int i = 0; i < length; ++ i) 
         {
-            // check if frs_contains an ´=´
-            if (equal_pos = frs_contains (args[i], '='))
+            // check if kl_util_contains an ´=´
+            if (equal_pos = kl_util_contains (args[i], '='))
             {
                 args[i][equal_pos - 1] = '\0';
-                m_value = fr_convert_to_value (args[i] + equal_pos); // - 1
-                frs_trim (&args[i]);
+                m_value = kl_lex_convert_to_value (args[i] + equal_pos); // - 1
+                kl_util_trim (&args[i]);
                 if (is_illegal_name (args[i]))
                     error ("Variable ´%s´ cannot be called like that!", args[i]);
-                var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (m_value)), constant);
+                var_add (args[i], kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value)), constant);
                 continue;
             }
             if (is_illegal_name (args[i]))
                 error ("Variable ´%s´ cannot be called like that!", args[i]);
-            var_add (args[i], fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))), constant);
+            var_add (args[i], kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))), constant);
         }
     }
 
     void c_clabel (CmsData* data, int size)
     {
-        var_add_function_path ("local", data[0], fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (fr_get_current_register_position (&register_list)))), true);
+        var_add_function_path ("local", data[0], kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (kl_intp_get_current_register_position (&register_list)))), true);
     }
 
     void c_set_index (CmsData* data, int size) 
     { 
-        fr_register_add (&register_list, REGISTER_IND_SET (POINTER (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1]), fr_convert_to_value (data[2])));
+        kl_intp_register_add (&register_list, REGISTER_IND_SET (POINTER (var_get_pos_by_name (data[0], true)), kl_lex_convert_to_value (data[1]), kl_lex_convert_to_value (data[2])));
     }
 
-    void c_alloc (CmsData* data, int size) { fr_do_alloc (data[0], false); }
+    void c_alloc (CmsData* data, int size) { kl_lex_do_alloc (data[0], false); }
 
-    void c_alloc_const (CmsData* data, int size) { fr_do_alloc (data[0], true); }
+    void c_alloc_const (CmsData* data, int size) { kl_lex_do_alloc (data[0], true); }
 
-    void c_jlabel (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_JUMP (fr_convert_to_value (data[0]))); }
+    void c_jlabel (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_JUMP (kl_lex_convert_to_value (data[0]))); }
 
-    void c_set (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_SET (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1]))); }
+    void c_set (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_SET (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_lex_convert_to_value (data[1]))); }
 
-    void c_add (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_ADD (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1]))); }
+    void c_add (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_lex_convert_to_value (data[1]))); }
 
-    void c_sub (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_SUB (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1]))); }
+    void c_sub (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_SUB (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_lex_convert_to_value (data[1]))); }
 
-    void c_mul (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_MUL (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1]))); }
+    void c_mul (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_MUL (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_lex_convert_to_value (data[1]))); }
 
-    void c_div (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_DIV (VALUE_INT (var_get_pos_by_name (data[0], true)), fr_convert_to_value (data[1]))); }
+    void c_div (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_DIV (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_lex_convert_to_value (data[1]))); }
 
-    void c_set_pointer (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_SET (fr_convert_to_value (data[0]), fr_convert_to_value (data[1]))); }
+    void c_set_pointer (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_SET (kl_lex_convert_to_value (data[0]), kl_lex_convert_to_value (data[1]))); }
 
-    void c_add_pointer (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_ADD (fr_convert_to_value (data[0]), fr_convert_to_value (data[1]))); }
+    void c_add_pointer (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_ADD (kl_lex_convert_to_value (data[0]), kl_lex_convert_to_value (data[1]))); }
 
-    void c_sub_pointer (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_SUB (fr_convert_to_value (data[0]), fr_convert_to_value (data[1]))); }
+    void c_sub_pointer (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_SUB (kl_lex_convert_to_value (data[0]), kl_lex_convert_to_value (data[1]))); }
 
-    void c_mul_pointer (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_MUL (fr_convert_to_value (data[0]), fr_convert_to_value (data[1]))); }
+    void c_mul_pointer (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_MUL (kl_lex_convert_to_value (data[0]), kl_lex_convert_to_value (data[1]))); }
 
-    void c_div_pointer (CmsData* data, int size) { fr_register_add (&register_list, REGISTER_DIV (fr_convert_to_value (data[0]), fr_convert_to_value (data[1]))); }
+    void c_div_pointer (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_DIV (kl_lex_convert_to_value (data[0]), kl_lex_convert_to_value (data[1]))); }
 
     void do_list_statements (char* data, Register* (reg)(Value value))
     {
         char** args;
-        size_t length = frs_split (data, ',', &args);
+        size_t length = kl_util_split (data, ',', &args);
 
         for (size_t i = 0; i < length; ++ i)
-            fr_register_add (&register_list, reg (fr_convert_to_value (args[i])));
+            kl_intp_register_add (&register_list, reg (kl_lex_convert_to_value (args[i])));
 
         free (args);
         args = NULL;
@@ -847,12 +962,12 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
     void c_check (CmsData* data, int size)
     {
-        Value  m_value = fr_convert_to_value (data[0]);
-        size_t m_index = fr_register_add (&register_list, REGISTER_ALLOC (m_value));
+        Value  m_value = kl_lex_convert_to_value (data[0]);
+        size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value));
 
-        size_t x = fr_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
-        fr_compile (data[1], variables, &variable_count, true);
-        register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
+        size_t x = kl_intp_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+        kl_lex_compile (data[1], variables, &variable_count, true);
+        register_list[x]->reg_values[2] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
     }
 
     void c_check_short (CmsData* data, int size)
@@ -863,12 +978,12 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
     void c_ncheck (CmsData* data, int size)
     {
-        Value  m_value = fr_convert_to_value (data[0]);
-        size_t m_index = fr_register_add (&register_list, REGISTER_ALLOC (m_value));
+        Value  m_value = kl_lex_convert_to_value (data[0]);
+        size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value));
 
-        size_t x = fr_register_add (&register_list, REGISTER_CMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
-        fr_compile (data[1], variables, &variable_count, true);
-        register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
+        size_t x = kl_intp_register_add (&register_list, REGISTER_CMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+        kl_lex_compile (data[1], variables, &variable_count, true);
+        register_list[x]->reg_values[2] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
     }
 
     void c_ncheck_short (CmsData* data, int size)
@@ -879,15 +994,15 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
     void c_loop (CmsData* data, int size)
     {
-        size_t loop_index = fr_get_current_register_position (&register_list);
+        size_t loop_index = kl_intp_get_current_register_position (&register_list);
 
-        Value  m_value = fr_convert_to_value (data[0]);
-        size_t m_index = fr_register_add (&register_list, REGISTER_ALLOC (m_value));
+        Value  m_value = kl_lex_convert_to_value (data[0]);
+        size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value));
 
-        size_t x = fr_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
-        fr_compile (data[1], variables, &variable_count, true);
-        fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (loop_index)));
-        register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
+        size_t x = kl_intp_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+        kl_lex_compile (data[1], variables, &variable_count, true);
+        kl_intp_register_add (&register_list, REGISTER_JUMP (VALUE_INT (loop_index)));
+        register_list[x]->reg_values[2] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
     }
 
     void c_loop_short (CmsData* data, int size)
@@ -898,86 +1013,86 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
     void c_check_else (CmsData* data, int size)
     {
-        Value  m_value = fr_convert_to_value (data[0]);
-        size_t m_index = fr_register_add (&register_list, REGISTER_ALLOC (m_value));
+        Value  m_value = kl_lex_convert_to_value (data[0]);
+        size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value));
 
-        size_t x = fr_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+        size_t x = kl_intp_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
         {
-            fr_compile (data[1], variables, &variable_count, true);
+            kl_lex_compile (data[1], variables, &variable_count, true);
         }
-        size_t y = fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (0)));
-        register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
+        size_t y = kl_intp_register_add (&register_list, REGISTER_JUMP (VALUE_INT (0)));
+        register_list[x]->reg_values[2] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
         {
-            fr_compile (data[2], variables, &variable_count, true);
+            kl_lex_compile (data[2], variables, &variable_count, true);
         }
-        register_list[y]->reg_values[0] = VALUE_INT (fr_get_current_register_position (&register_list));
+        register_list[y]->reg_values[0] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
     }
 
     void c_ncheck_else (CmsData* data, int size)
     {
-        Value  m_value = fr_convert_to_value (data[0]);
-        size_t m_index = fr_register_add (&register_list, REGISTER_ALLOC (m_value));
+        Value  m_value = kl_lex_convert_to_value (data[0]);
+        size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value));
 
-        size_t x = fr_register_add (&register_list, REGISTER_CMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+        size_t x = kl_intp_register_add (&register_list, REGISTER_CMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
         {
-            fr_compile (data[1], variables, &variable_count, true);
+            kl_lex_compile (data[1], variables, &variable_count, true);
         }
-        size_t y = fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (0)));
-        register_list[x]->reg_values[2] = VALUE_INT (fr_get_current_register_position (&register_list));
+        size_t y = kl_intp_register_add (&register_list, REGISTER_JUMP (VALUE_INT (0)));
+        register_list[x]->reg_values[2] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
         {
-            fr_compile (data[2], variables, &variable_count, true);
+            kl_lex_compile (data[2], variables, &variable_count, true);
         }
-        register_list[y]->reg_values[0] = VALUE_INT (fr_get_current_register_position (&register_list));
+        register_list[y]->reg_values[0] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
     }
 
-    void c_function (CmsData* data, int size) { create_function (data[0], data[1], data[2], fr_convert_to_value); }
+    void c_function (CmsData* data, int size) { create_function (data[0], data[1], data[2], kl_lex_convert_to_value); }
 
     void c_function_short (CmsData* data, int size)
     {
         strcat (data[2] = realloc (data[2], strlen (data[2]) + 2), ";");
-        create_function (data[0], data[1], data[2], fr_convert_to_value);
+        create_function (data[0], data[1], data[2], kl_lex_convert_to_value);
     }
 
     void c_function_ret (CmsData* data, int size)
     {
         char* f_code = malloc (4 + strlen (data[2]) + 1 + 1);
         sprintf (f_code, "ret %s;", data[2]);
-        create_function (data[0], data[1], f_code, fr_convert_to_value);
+        create_function (data[0], data[1], f_code, kl_lex_convert_to_value);
         free (f_code);
         f_code = NULL;
     }
 
-    void c_call (CmsData* data, int size) { create_call_function (data[0], data[1], fr_convert_to_value); }
+    void c_call (CmsData* data, int size) { create_call_function (data[0], data[1], kl_lex_convert_to_value); }
 
     void c_return (CmsData* data, int size)
     {
         if (in_function > 0) // function
         {
-            if (size > 0) fr_register_add (&register_list, REGISTER_SET (VALUE_INT (in_function + 3), fr_convert_to_value (data[0])));
-            fr_register_add (&register_list, REGISTER_JUMP (POINTER (in_function + 2)));
+            if (size > 0) kl_intp_register_add (&register_list, REGISTER_SET (VALUE_INT (in_function + 3), kl_lex_convert_to_value (data[0])));
+            kl_intp_register_add (&register_list, REGISTER_JUMP (POINTER (in_function + 2)));
         }
         else if (in_function == 0) // main
         {
-            fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (-1)));
+            kl_intp_register_add (&register_list, REGISTER_JUMP (VALUE_INT (-1)));
         }
         else // scope
         {
             if (scope_jump_back_size >= 100)
                 error ("Maximum ´ret´ amount in ´scope´ of 100 has been reached!", NULL);
-            if (size > 0) fr_register_add (&register_list, REGISTER_SET (VALUE_INT (abs(in_function)), fr_convert_to_value (data[0])));
-            scope_jump_back[scope_jump_back_size ++] = fr_register_add (&register_list, REGISTER_JUMP (VALUE_INT (-1)));
+            if (size > 0) kl_intp_register_add (&register_list, REGISTER_SET (VALUE_INT (abs(in_function)), kl_lex_convert_to_value (data[0])));
+            scope_jump_back[scope_jump_back_size ++] = kl_intp_register_add (&register_list, REGISTER_JUMP (VALUE_INT (-1)));
         }
     }
 
     void c_scope (CmsData* data, int size)
     {
-        int m_index = fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))); // alloc memory for return
+        int m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))); // alloc memory for return
         int old_in_function = in_function;
         in_function = -m_index; // store old ´in_function´ and set new one (neg used for ´scope´ in ret)
 
-        fr_compile (data[0], variables, &variable_count, true); // compile code in bracket
+        kl_lex_compile (data[0], variables, &variable_count, true); // compile code in bracket
 
-        Value value_current_reg_pos = VALUE_INT (fr_get_current_register_position (&register_list)); 
+        Value value_current_reg_pos = VALUE_INT (kl_intp_get_current_register_position (&register_list)); 
         for (byte i = 0; i < scope_jump_back_size; ++ i)
             register_list[scope_jump_back[i]]->reg_values[0] = value_current_reg_pos;
         scope_jump_back_size = 0;
@@ -987,8 +1102,11 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
 
     void c_include (CmsData* data, int size)
     {
+        int old_line = cms_get_current_line_number ();
+        cms_set_current_line_number (0);
         ((char*)data[0])[strlen (data[0] ++) - 1] = '\0'; // remove start & end bracket
-        fr_compile (frs_read_file (data[0]), variables, &variable_count, false);
+        kl_lex_compile (kl_util_read_file (data[0]), variables, &variable_count, false);
+        cms_set_current_line_number (old_line);
     }
 
     // var & val getting recocnised even if char is with out space next to it!
@@ -1043,7 +1161,7 @@ int fr_compile (char* code, Variable** variables, size_t* pre_variable_count, co
     } ));
 
     // Allocate at register index 0 value 0 -> pointer pointing at 0 have value 0
-    fr_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+    kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
 
     // Search syntax using ´cms_template´ in ´example_text´
     cms_find (code, cms_template);

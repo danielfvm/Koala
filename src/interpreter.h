@@ -37,10 +37,10 @@ enum Execution
     CMP,
     NCMP,
     READ_CHAR,
-    CODE,
     OR,
     AND,
-    FLUSH
+    FLUSH,
+    LIB_FUNC
 };
 
 enum DataType
@@ -51,22 +51,17 @@ enum DataType
     DT_INT,
     DT_FLOAT,
     DT_CHAR,
-    DT_STRING
+    DT_STRING,
+    DT_LIST
 };
 
-enum ValueType
-{
-    VALUE_TYPE_VALUE   = -3,
-    VALUE_TYPE_POINTER = -2,
-    VALUE_TYPE_POINTER_POINTER = -1,
-};
-
+#define NO_SIZE -1
 
 typedef struct
 {
-    byte  data_type;
-    int   index;
-    void* value;
+    byte   data_type;
+    size_t size;        // used in VALUE_LIST as Size
+    void*  value;
 } Value;
 
 typedef struct
@@ -79,15 +74,15 @@ typedef Register* Registry;
 
 typedef Value Memory;
 
-void   fr_register_create (Registry** register_list);
+void   kl_intp_register_create (Registry** register_list);
 
-size_t fr_register_add (Registry** register_list, Register* reg);
+size_t kl_intp_register_add (Registry** register_list, Register* reg);
 
-size_t fr_register_add_all (Registry** register_list, Register** regs);
+size_t kl_intp_register_add_all (Registry** register_list, Register** regs);
 
-size_t fr_get_current_register_position (Registry** register_list);
+size_t kl_intp_get_current_register_position (Registry** register_list);
 
-char*  fr_get_register_type_as_name (Register* reg);
+char*  kl_intp_get_register_type_as_name (Register* reg);
 
 Value POINTER (int m_pointer);
 
@@ -95,7 +90,7 @@ Value POINTER_POINTER (int m_pointer);
 
 Value VALUE (byte data_type, void* value);
 
-Value VALUE_STR (void* value);
+Value VALUE_STR (char* value);
 
 Value VALUE_CHAR (char value);
 
@@ -103,7 +98,7 @@ Value VALUE_INT (int value);
 
 Value VALUE_FLOAT (float value);
 
-Value VALUE_VALUE (Value value);
+Value VALUE_LIST (Value* value, size_t size);
 
 
 Register* REGISTER_ALLOC (Value m_value);
@@ -166,8 +161,8 @@ Register* REGISTER_PUSH (Value m_index);
 
 Register* REGISTER_POP (Value m_index);
 
-Register* REGISTER_CODE (Value code);
+Register* REGISTER_LIB_FUNC (Value id, Value ret, Value args);
 
-int fr_run (const Registry* register_list);
+int kl_intp_run (const Registry* register_list);
 
 #endif // INTERPRETER_H

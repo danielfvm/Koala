@@ -2,10 +2,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#define KOALA_VERSION "0.3-a1"
+
 #include "multisearcher.h"
 #include "interpreter.h"
 #include "gnumber.h"
 #include "compiler.h"
+#include "library.h"
+#include "lib/std/stdlib.h"
 
 #ifdef _WIN32
 #define OS "Windows 32"
@@ -24,30 +28,38 @@
 #endif
 
 
+/* Koala's main function < Program starts here */
 int main (int argc, char** argv)
 {
     Variable* variables;
-    size_t    variables_count = 0;
+    size_t variables_count;
 
-    if (!(variables = malloc (sizeof (Variable))))
-    {
-        fprintf (stderr, "Failed to create list ´variables´ (Main)\n");
-        return EXIT_FAILURE;
-    }
+    variables = malloc (sizeof (Variable));
+    variables_count = 0;
 
+    // Missing Koala-Filepath -> Error
     if (argc < 2)
     {
         fprintf (stderr, "Missing File argument!\n");
-        return EXIT_FAILURE;
+        return EXIT_SUCCESS;
     }
 
-    fr_compiler_init ();
+    // Add STD functions
+    kl_lib_std_init ();
 
-    fr_add_variable (&variables, &variables_count, "local", "__os__", true, VALUE_STR (OS));
+    // Initialize the compiler
+    kl_lex_compiler_init ();
 
-    fr_compile (frs_read_file (argv[1]), &variables, &variables_count, true);
+    // Add Variables with System Information & Universal-Constants
+    kl_lex_add_variable (&variables, &variables_count, "local", "_OS_", true, VALUE_STR (OS));
+    kl_lex_add_variable (&variables, &variables_count, "local", "_PI_", true, VALUE_FLOAT (3.1415926535));
+    kl_lex_add_variable (&variables, &variables_count, "local", "_E_",  true, VALUE_FLOAT (2.7182818284));
 
-    fr_compiler_run ();
+    // Translate to Koala-Register format
+    kl_lex_compile (kl_util_read_file (argv[1]), &variables, &variables_count, true);
+
+    // Execute Koala's registers
+    kl_lex_compiler_run ();
 
     return EXIT_SUCCESS;
 }

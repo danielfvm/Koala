@@ -1,0 +1,7 @@
+inc "examples/std.frs";
+
+nextASCII (text) < forEdit (0, len (text) - 1, STR, (i, edit_text) {
+    ~edit_text += text[i] + 1;
+});
+
+O: nextASCII (read (STR)), '\n';
