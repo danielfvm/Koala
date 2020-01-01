@@ -7,6 +7,7 @@ A small Interpreter Language
 $ git clone https://github.com/danielfvm/Koala
 $ cd Koala
 $ make
+$ make install
 ```
 
 ## Download on Windows:
