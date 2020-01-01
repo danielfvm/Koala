@@ -1,6 +1,5 @@
 #include "interpreter.h"
 #include "compiler.h"
-#include "util.h"
 #include "library.h"
 
 #include <stdio.h>
@@ -452,8 +451,25 @@ void kl_intp_strcpy (char** dest, const char* src)
     (*dest)[i] = '\0';
 }
 
-int kl_intp_run (const Registry* register_list)
+Registry* register_list;
+
+bool  kl_intp_set_pointer (size_t m_index, Value m_value)
 {
+    if (register_list[m_index]->reg_type != ALLOC)
+        return false;
+    register_list[m_index]->reg_values[0] = m_value;
+    return true;
+}
+
+Value kl_intp_get_pointer (size_t m_index)
+{
+    return register_list[m_index]->reg_values[0];
+}
+
+int kl_intp_run (Registry* _register_list)
+{
+    register_list = _register_list;
+
     Value kl_intp_get_memory_value (Value value)
     {
         if (value.data_type == DT_POINTER)
@@ -534,7 +550,7 @@ int kl_intp_run (const Registry* register_list)
             size_t size = kl_intp_get_size (value);
             for (size_t i = 0; i < size; ++ i)
             {
-                print (((Value*)kl_intp_get_memory (value))[i]);
+                print (((Value*) kl_intp_get_memory (value))[i]);
                 if (i != size - 1) printf (", ");
             }
 
@@ -548,7 +564,7 @@ int kl_intp_run (const Registry* register_list)
             (kl_intp_get_data_type (v_two) == DT_STRING && kl_intp_get_data_type (v_one) != DT_STRING))
             return false;
         else if (kl_intp_get_data_type (v_one) == DT_STRING && kl_intp_get_data_type (v_two) == DT_STRING)
-            return !strcmp ( kl_intp_get_memory (v_one), kl_intp_get_memory (v_two));
+            return !strcmp (kl_intp_get_memory (v_one), kl_intp_get_memory (v_two));
         else
             return kl_intp_get_as_number (v_one) == kl_intp_get_as_number (v_two);
     }
@@ -589,10 +605,11 @@ int kl_intp_run (const Registry* register_list)
             for (size_t m_i = 0; m_i < def_size; ++ m_i)
             {
                 Value value = ((Value*) def_value)[m_i];
+                ((Value*) save->value)[m_i].value = NULL;
                 alloc (&((Value*) save->value)[m_i], value, VALUE_INT (false));
-//               ((Value*) save->value)[m_i].data_type = kl_intp_get_data_type (value);
-//               ((Value*) save->value)[m_i].value     = kl_intp_get_memory    (value);
-//               ((Value*) save->value)[m_i].size      = kl_intp_get_size      (value);
+                //((Value*) save->value)[m_i].data_type = kl_intp_get_data_type (value);
+                //((Value*) save->value)[m_i].value     = kl_intp_get_memory    (value);
+                //((Value*) save->value)[m_i].size      = kl_intp_get_size      (value);
             }
         }
         else

@@ -1,6 +1,8 @@
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
 
+#include "util.h"
+
 #include <stdlib.h>
 
 #define FLOAT_CONV_VALUE 1000000.0
@@ -84,6 +86,14 @@ size_t kl_intp_get_current_register_position (Registry** register_list);
 
 char*  kl_intp_get_register_type_as_name (Register* reg);
 
+int    kl_intp_run (Registry* register_list);
+
+/* Returns FALSE if something went wrong */
+bool  kl_intp_set_pointer (size_t m_index, Value m_value);
+
+Value kl_intp_get_pointer (size_t m_index);
+
+
 Value POINTER (int m_pointer);
 
 Value POINTER_POINTER (int m_pointer);
@@ -162,7 +172,5 @@ Register* REGISTER_PUSH (Value m_index);
 Register* REGISTER_POP (Value m_index);
 
 Register* REGISTER_LIB_FUNC (Value id, Value ret, Value args);
-
-int kl_intp_run (const Registry* register_list);
 
 #endif // INTERPRETER_H

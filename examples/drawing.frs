@@ -1,6 +1,6 @@
 inc "examples/std.frs";
 
-<*
+<* Not in use currently!
     ansi.moveUp (x) > O: "\x1b[$xA";
     ansi.moveDown (x) > O: "\x1b[$xB";
     ansi.moveRight (x) > O: "\x1b[$xC";
@@ -28,15 +28,15 @@ init ()
     ansi.moveTo (1, MAX_HEIGHT + 1 + 2);
     O: "██" * (MAX_WIDTH + 2);
 
-    for (1, MAX_HEIGHT + 2, (y) {
+    (1..MAX_HEIGHT + 2), y -> {
         ansi.moveTo (1, y);
         O: "██";
-    });
+    };
 
-    for (0, MAX_HEIGHT + 2, (y) {
+    (0..MAX_HEIGHT + 2), y -> {
         ansi.moveTo (MAX_WIDTH * 2 + 5, y + 1);
         O: "██";
-    });
+    };
 
     <* reset color to white *>
     ansi.setColor (39);
@@ -69,7 +69,7 @@ true -> {
         ansi.clear(); 
         ret;
     }
-
+    
     <* mirror on screen end *>
     (snake_y > MAX_HEIGHT) > snake_y = 0;
     (snake_x > MAX_WIDTH)  > snake_x = 0;

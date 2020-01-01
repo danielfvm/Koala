@@ -1,0 +1,24 @@
+<* 
+  Example where we read a File
+  and then we trim it's contant
+  and print it on the screen
+*>
+
+inc "examples/std.frs";
+
+<* Trims the spaces & tabs & linefeeds of a string
+trim (text) < forEdit (0, len (text) - 1, STR, (i, ntext) {
+    (text[i] > ' ') > ~ntext += text[i];
+});
+
+var string;
+var filepath;
+
+O(flush): "Please write the Filepath: ";
+filepath = trim (read (STR));               ** trims the \n at the end of string
+
+!(readFile (filepath, $string)) {
+    O: "Couldn't read File!\n";
+} {
+    O: trim (string), '\n';
+}

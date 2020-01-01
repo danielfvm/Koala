@@ -6,8 +6,8 @@
 
 char* kl_util_read_file (const char* filepath)
 {
-    char* buffer;
-    FILE* file;
+    char* buffer = NULL;
+    FILE* file   = NULL;
     size_t len;
     
     if ((file = fopen (filepath, "r")) == NULL)
@@ -16,10 +16,10 @@ char* kl_util_read_file (const char* filepath)
         exit (EXIT_FAILURE);
     }
 
-    buffer = NULL;
-
     if (getdelim (&buffer, &len, '\0', file) == -1)
         return NULL;
+
+    fclose (file);
 
     return buffer;
 }
@@ -31,8 +31,8 @@ bool kl_util_has_illigal_ascii (const char* text)
               (text[i] >= 'A' && text[i] <= 'Z') || 
               (text[i] >= '0' && text[i] <= '9') ||
                text[i] == '_' || text[i] == '.'))
-                return 1;
-    return 0;
+                return true;
+    return false;
 }
 
 int kl_util_find_string_end (size_t p, const char* text)
@@ -75,16 +75,17 @@ int kl_util_find_string_end (size_t p, const char* text)
 
 int kl_util_find_next_bracket (size_t p, const char* text)
 {
-    if (p >= strlen (text))
+    size_t inside_brackets  = 0;
+    size_t text_size        = strlen (text);
+
+    if (p >= text_size)
     {
         fprintf (stderr, "[CMS][ERR] → first char out of text size\n");
         return -1;
     }
 
-    size_t inside_brackets  = 0;
-    size_t text_size        = strlen (text);
-    char   bracket_open     = text[p];
-    char   bracket_close;
+    char bracket_close;
+    char bracket_open = text[p];
 
     // Add additional brackets here
     switch (bracket_open)
@@ -104,12 +105,12 @@ int kl_util_find_next_bracket (size_t p, const char* text)
     for (; p < text_size; ++ p)
     {
         // Control if this is working!
-        if (text[p] == '\\' && (p >= 1 && text[p-1] != '\\') && ++ p)
+        if (text[p] == '\\' && (p >= 1 && text[p - 1] != '\\') && ++ p)
             continue;
 
-        if (text[p] == '\"' && (p <= 0 || text[p-1] != '\\') && !in_char)
+        if (text[p] == '\"' && (p <= 0 || text[p - 1] != '\\') && !in_char)
             in_string = !in_string;
-        if (text[p] == '\'' && (p <= 0 || text[p-1] != '\\') && !in_string)
+        if (text[p] == '\'' && (p <= 0 || text[p - 1] != '\\') && !in_string)
             in_char = !in_char;
 
         if (in_string || in_char)
@@ -169,8 +170,8 @@ void kl_util_ctrim (char** text)
         return;
 
     size_t i, j;
-    bool in_string = 0;
-    bool in_char   = 0;
+    bool in_string = false;
+    bool in_char   = false;
 
     for (i = 0; (*text)[i] != '\0'; ++ i)
     {
@@ -202,8 +203,8 @@ size_t kl_util_contains (char* text, char c)
     if (text == NULL)
         return false;
 
-    bool in_string = 0;
-    bool in_char   = 0;
+    bool in_string = false;
+    bool in_char   = false;
     int in_bracket = 0;
 
     for (size_t i = 0; text[i] != '\0'; ++ i)
@@ -283,7 +284,7 @@ bool kl_util_is_str_concat (char* str)
 
     kl_util_ctrim (&text);
 
-    bool is_string = 0;
+    bool is_string = false;
 
     for (size_t i = 0; text[i] != '\0'; ++ i)
     {

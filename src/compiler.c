@@ -590,10 +590,12 @@ int kl_lex_compile (char* code, Variable** variables, size_t* pre_variable_count
 
         size_t is_point = kl_util_contains (text, '.');
 
+        // TODO: Step!
         if (is_point && text[is_point] == '.')
         {
-            char* from = kl_util_substr (text, 0, is_point - 1);
-            char* to   = kl_util_substr (text, is_point + 1, strlen (text) - 1);
+            text[is_point - 1] = ',';
+            text[is_point]     = ' ';
+            return call_lib_function (kl_lib_get_function_by_name ("range"), text, kl_lex_convert_to_value);
         }
 
         size_t is_bigger  = kl_util_contains (text, '>'); // >,  >=
@@ -992,14 +994,56 @@ int kl_lex_compile (char* code, Variable** variables, size_t* pre_variable_count
         c_ncheck (data, size);
     }
 
+    void c_loop_indexing (CmsData* data, int size)
+    {
+        size_t var_index;
+        size_t var_value;
+        size_t var_len;
+
+        var_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+        var_add (data[1], var_value = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))), true);
+
+        var_len = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+
+        Value* args_values = malloc (sizeof (Value));
+        args_values[0] = kl_lex_convert_to_value (data[0]);
+
+        kl_intp_register_add (&register_list, REGISTER_LIB_FUNC (
+            VALUE_INT  (kl_lib_get_function_by_name ("len")),
+            VALUE_INT  (var_len),
+            VALUE_LIST (args_values, 1)
+        ));
+
+        size_t loop_index = kl_intp_get_current_register_position (&register_list);
+
+        size_t x = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0)));
+        kl_intp_register_add (&register_list, REGISTER_SMA (POINTER (var_index), POINTER (var_len), VALUE_INT (x)));
+        size_t y = kl_intp_register_add (&register_list, REGISTER_CMP (POINTER (x), VALUE_INT (true), VALUE_INT (0)));
+
+        kl_intp_register_add (&register_list, REGISTER_IND (VALUE_INT (var_value), args_values[0], POINTER (var_index)));
+
+        kl_lex_compile (data[2], variables, &variable_count, true);
+        kl_intp_register_add (&register_list, REGISTER_ADD  (VALUE_INT (var_index), VALUE_INT (1)));
+        kl_intp_register_add (&register_list, REGISTER_JUMP (VALUE_INT (loop_index)));
+        register_list[y]->reg_values[2] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
+
+        var_rem ();
+    }
+
+    void c_loop_indexing_short (CmsData* data, int size)
+    {
+        strcat (data[2] = realloc (data[2], strlen (data[2]) + 2), ";");
+        c_loop_indexing (data, size);
+    }
+
     void c_loop (CmsData* data, int size)
     {
         size_t loop_index = kl_intp_get_current_register_position (&register_list);
 
         Value  m_value = kl_lex_convert_to_value (data[0]);
         size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value));
-
-        size_t x = kl_intp_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+// CHECK why I do another alloc here???
+        size_t x = kl_intp_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (false), VALUE_INT (0)));
         kl_lex_compile (data[1], variables, &variable_count, true);
         kl_intp_register_add (&register_list, REGISTER_JUMP (VALUE_INT (loop_index)));
         register_list[x]->reg_values[2] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
@@ -1016,7 +1060,7 @@ int kl_lex_compile (char* code, Variable** variables, size_t* pre_variable_count
         Value  m_value = kl_lex_convert_to_value (data[0]);
         size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value));
 
-        size_t x = kl_intp_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+        size_t x = kl_intp_register_add (&register_list, REGISTER_NCMP (POINTER (m_index), VALUE_INT (false), VALUE_INT (0)));
         {
             kl_lex_compile (data[1], variables, &variable_count, true);
         }
@@ -1033,7 +1077,7 @@ int kl_lex_compile (char* code, Variable** variables, size_t* pre_variable_count
         Value  m_value = kl_lex_convert_to_value (data[0]);
         size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value));
 
-        size_t x = kl_intp_register_add (&register_list, REGISTER_CMP (POINTER (m_index), VALUE_INT (0), VALUE_INT (0)));
+        size_t x = kl_intp_register_add (&register_list, REGISTER_CMP (POINTER (m_index), VALUE_INT (false), VALUE_INT (0)));
         {
             kl_lex_compile (data[1], variables, &variable_count, true);
         }
@@ -1116,12 +1160,20 @@ int kl_lex_compile (char* code, Variable** variables, size_t* pre_variable_count
         cms_add ("val %;",              c_alloc_const,  CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING_LENGTH | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("ret %;",              c_return,       CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING_LENGTH | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("ret ;",               c_return,       CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING        | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+
         cms_add ("{ % }",               c_scope,        CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+
+        cms_add ("( % ), # -> { % }",   c_loop_indexing,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("#, # -> { % }",       c_loop_indexing,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("( % ), # -> % ;",     c_loop_indexing_short,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("#, # -> % ;",         c_loop_indexing_short,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+
         cms_add ("# ( % ) { % }",       c_function,     CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) > % ;",       c_function_short,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) < % ;",       c_function_ret, CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) ;",           c_call,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) ( % ) ;",       c_call,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+
         cms_add ("~ # += % ;",          c_add_pointer,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("~ # -= % ;",          c_sub_pointer,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("~ # *= % ;",          c_mul_pointer,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
@@ -1133,6 +1185,7 @@ int kl_lex_compile (char* code, Variable** variables, size_t* pre_variable_count
         cms_add ("# /= % ;",            c_div,          CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# = % ;",             c_set,          CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# [ % ] = % ;",       c_set_index,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+
         cms_add ("O: % ;",              c_print,        CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("I: % ;",              c_input,        CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("O ( flush ) : % ;",   c_flush,        CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
@@ -1140,8 +1193,10 @@ int kl_lex_compile (char* code, Variable** variables, size_t* pre_variable_count
         cms_add ("S: % ;",              c_system,       CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("PUSH: % ;",           c_push,         CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("POP: % ;",            c_pop,          CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+
         cms_add ("jump % ;",            c_jlabel,       CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("#:",                  c_clabel,       CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+
         cms_add ("! ( % ) { % } { % }", c_ncheck_else,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! ( % ) { % }",       c_ncheck,       CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("! ( % ) > % ;",       c_ncheck_short, CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
@@ -1154,6 +1209,7 @@ int kl_lex_compile (char* code, Variable** variables, size_t* pre_variable_count
         cms_add ("# { % } { % }",       c_check_else,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# { % }",             c_check,        CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# > % ;",             c_check_short,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+
         cms_add ("( % ) -> { % }",      c_loop,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# -> { % }",          c_loop,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) -> % ;",        c_loop_short,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);

@@ -4,8 +4,6 @@ inc "examples/std.frs";
 <* do TODOs from code *>
 <* changing size *>
 
-O: readFile ("examples/std.fros");
-
 <*
 var x = [12, 43];
 x += 3;
@@ -15,8 +13,31 @@ O: x, '\n';
 <*
 div (x, y) < [x / y, x % y];
 
-O: (div (10, 2.0))[0];
+O: div (9, 5.0);
+O: div (10, 5.0);
 *>
+
+<*
+var in = 0..5;      ** or use range()
+var i  = 0;
+
+(i < len (in)) -> {
+    O: in[i], '\n';
+    i += 1;
+}
+*>
+
+trim (text) < forEdit (0, len (text) - 1, STR, (i, ntext) {
+    (text[i] > ' ') > ~ntext += text[i];
+});
+
+var string;
+
+!(readFile("example.frs", $string)) {
+    O: "Couldn't read File!\n";
+} {
+    O: trim (string);
+}
 
 <*
 true -> {

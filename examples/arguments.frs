@@ -1,0 +1,8 @@
+<*
+  Lists all arguments passed
+  on program startup
+*>
+
+(0.._argc_ - 1), i -> {
+    O: _argv_[i], '\n';
+}

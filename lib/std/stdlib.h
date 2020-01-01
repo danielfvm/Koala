@@ -43,11 +43,60 @@ Value kl_lib_std_tan (int argc, Value* argv) {
     return VALUE_FLOAT (tan (argc <= 0 ? 0 : NUMBER (argv[0])));
 }
 
-// TODO: change read Function to return state & changes string as ref
+Value kl_lib_std_sqrt (int argc, Value* argv) {
+    return VALUE_FLOAT (sqrt (argc <= 0 ? 0 : NUMBER (argv[0])));
+}
+
+Value kl_lib_std_list (int argc, Value* argv) {
+    int size = argc <= 0 ? 0 : NUMBER (argv[0]);
+    Value* values = malloc (sizeof (Value) * size);
+    for (int i = 0; i < size; ++ i)
+        values[i] = VALUE_INT (0);
+    return VALUE_LIST (values, size);
+}
+
+// TODO: Support float!
+Value kl_lib_std_range (int argc, Value* argv) {
+    int from = argc <= 0 ? 0 : NUMBER (argv[0]);
+    int to   = argc <= 1 ? 0 : NUMBER (argv[1]);
+    int step = argc <= 2 ? 1 : NUMBER (argv[2]);
+    int size = abs (from - to) / step + 1;
+
+    Value* values = malloc (sizeof (Value) * size);
+
+    int i;
+
+    if (from < to) for (i = 0; i < size; ++ i)
+        values[i] = VALUE_INT (i * step + from);
+    else if (from > to) for (i = 0; i < size; ++ i)
+        values[i] = VALUE_INT (from - i * step);
+
+    return VALUE_LIST (values, size);
+}
+
 Value kl_lib_std_readFile (int argc, Value* argv) {
-    if (argc <= 0 || argv[0].data_type != DT_STRING)
-        return VALUE_INT (0);
-    return VALUE_STR (kl_util_read_file (argv[0].value));
+    if (argc <= 1 || argv[0].data_type != DT_STRING || argv[1].data_type != DT_INT)
+        return VALUE_INT (false);
+
+    char* buffer;
+    FILE* file;
+    size_t len;
+    
+    if ((file = fopen (argv[0].value, "r")) == NULL)
+        return VALUE_INT (false);
+
+    buffer = NULL;
+
+    if (getdelim (&buffer, &len, '\0', file) == -1)
+        return VALUE_INT (false);
+
+    kl_intp_set_pointer (NUMBER (argv[1]), VALUE_STR (buffer));
+
+    free (buffer);
+
+    fclose (file);
+
+    return VALUE_INT (true);
 }
 
 void kl_lib_std_init () {
@@ -58,5 +107,8 @@ void kl_lib_std_init () {
     kl_lib_add_function ("sin",         kl_lib_std_sin);
     kl_lib_add_function ("cos",         kl_lib_std_cos);
     kl_lib_add_function ("tan",         kl_lib_std_tan);
+    kl_lib_add_function ("sqrt",        kl_lib_std_sqrt);
     kl_lib_add_function ("readFile",    kl_lib_std_readFile);
+    kl_lib_add_function ("list",       kl_lib_std_list);
+    kl_lib_add_function ("range",      kl_lib_std_range);
 }
