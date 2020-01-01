@@ -1,4 +1,4 @@
-# Koala
+# Koala 0.3-a1
 A small Interpreter Language
 
 ## Download on Linux/Mac:
