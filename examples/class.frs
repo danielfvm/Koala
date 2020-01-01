@@ -1,3 +1,5 @@
+<* Not Working, No OOP right now! *>
+
 test (fset, fget, x) {
 
     set (x) > ~test.x = x;
