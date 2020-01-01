@@ -34,8 +34,8 @@ O: "$x + $y = ${x + y}";        # prints answer
 
 ## Collaborators:
 
-# Developer
+### Developer
 <li>DanielFvM<br></li><br>
 
-# Helper
+### Helper
 <li>Marhorn</li><br>
