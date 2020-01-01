@@ -6,8 +6,7 @@
 
 #include "multisearcher.h"
 #include "interpreter.h"
-#include "gnumber.h"
-#include "compiler.h"
+#include "lexer.h"
 #include "library.h"
 #include "../lib/std/stdlib.h"
 

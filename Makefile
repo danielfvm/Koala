@@ -4,10 +4,10 @@ build:
 	gcc -c src/gnumber.c -o obj/gnumber.o
 	gcc -c src/multisearcher.c -o obj/multisearcher.o
 	gcc -c src/interpreter.c -o obj/interpreter.o
-	gcc -c src/compiler.c -o obj/compiler.o
+	gcc -c src/lexer.c -o obj/lexer.o
 	gcc -c src/util.c -o obj/util.o
 	gcc -c src/library.c -o obj/library.o
-	gcc obj/main.o obj/gnumber.o obj/multisearcher.o obj/compiler.o obj/interpreter.o obj/util.o obj/library.o -o bin/koala -lm
+	gcc obj/main.o obj/gnumber.o obj/multisearcher.o obj/lexer.o obj/interpreter.o obj/util.o obj/library.o -o bin/koala -lm
 
 run:
 	./bin/koala examples/example.frs

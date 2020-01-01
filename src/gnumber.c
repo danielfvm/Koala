@@ -1,5 +1,5 @@
 #include "gnumber.h"
-#include "compiler.h"
+#include "lexer.h"
 
 #include "gnumber.h"
 

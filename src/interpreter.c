@@ -1,5 +1,5 @@
 #include "interpreter.h"
-#include "compiler.h"
+#include "lexer.h"
 #include "library.h"
 
 #include <stdio.h>
