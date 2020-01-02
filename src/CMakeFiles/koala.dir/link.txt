@@ -1,1 +1,0 @@
-/usr/bin/gcc    -Wall -lm -Wextra -rdynamic CMakeFiles/koala.dir/main.c.o CMakeFiles/koala.dir/gnumber.c.o CMakeFiles/koala.dir/multisearcher.c.o CMakeFiles/koala.dir/interpreter.c.o CMakeFiles/koala.dir/parser.c.o CMakeFiles/koala.dir/util.c.o CMakeFiles/koala.dir/library.c.o  -o ../bin/koala 

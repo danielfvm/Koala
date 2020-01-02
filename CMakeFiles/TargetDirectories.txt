@@ -1,6 +1,0 @@
-/home/daniel/Documents/Projects/Koala/CMakeFiles/rebuild_cache.dir
-/home/daniel/Documents/Projects/Koala/CMakeFiles/run.dir
-/home/daniel/Documents/Projects/Koala/CMakeFiles/edit_cache.dir
-/home/daniel/Documents/Projects/Koala/src/CMakeFiles/rebuild_cache.dir
-/home/daniel/Documents/Projects/Koala/src/CMakeFiles/koala.dir
-/home/daniel/Documents/Projects/Koala/src/CMakeFiles/edit_cache.dir
