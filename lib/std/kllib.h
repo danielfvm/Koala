@@ -1,4 +1,7 @@
+#include "../../src/interpreter.h"
+
 #include <inttypes.h>
+#include <string.h>
 #include <math.h>
 
 Value kl_lib_std_getVersion (int argc, Value* argv) {
@@ -78,16 +81,23 @@ Value kl_lib_std_readFile (int argc, Value* argv) {
     if (argc <= 1 || argv[0].data_type != DT_STRING || argv[1].data_type != DT_INT)
         return VALUE_INT (false);
 
-    char* buffer;
-    FILE* file;
-    size_t len;
-    
-    if ((file = fopen (argv[0].value, "r")) == NULL)
+    FILE*  file;
+    char*  buffer;
+    size_t size;
+
+    if (!(file = fopen (argv[0].value, "r"))) 
         return VALUE_INT (false);
 
-    buffer = NULL;
+    fseek (file , 0L, SEEK_END);
+    size = ftell (file);
+    rewind (file);
 
-    if (getdelim (&buffer, &len, '\0', file) == -1)
+    /* allocate memory for entire content */
+    if (!(buffer = calloc (1, size + 1)))
+        return VALUE_INT (false);
+
+    /* copy the file into the buffer */
+    if(!fread (buffer, size, 1, file))
         return VALUE_INT (false);
 
     kl_intp_set_pointer (NUMBER (argv[1]), VALUE_STR (buffer));

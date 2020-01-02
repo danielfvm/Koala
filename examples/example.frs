@@ -4,6 +4,16 @@ inc "examples/std.frs";
 <* do TODOs from code *>
 <* changing size *>
 
+
+var t = 0;
+
+var x = $t;
+
+O: x, ' ', ~x, '\n';
+
+~x > O: "INF Loop!\n";
+
+
 <*
 var x = [12, 43];
 x += 3;
@@ -27,6 +37,7 @@ var i  = 0;
 }
 *>
 
+<*
 trim (text) < forEdit (0, len (text) - 1, STR, (i, ntext) {
     (text[i] > ' ') > ~ntext += text[i];
 });
@@ -38,6 +49,7 @@ var string;
 } {
     O: trim (string);
 }
+*>
 
 <*
 true -> {

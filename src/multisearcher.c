@@ -98,7 +98,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
 {
     size_t text_i, text_size, text_char, text_char_i;
     size_t template_i, template_size;
-    size_t i, j;
+    size_t i;
 
     size_t template_syntax_i;
     char   template_char;

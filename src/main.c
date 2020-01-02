@@ -6,14 +6,14 @@
 
 #include "multisearcher.h"
 #include "interpreter.h"
-#include "lexer.h"
+#include "parser.h"
 #include "library.h"
-#include "../lib/std/stdlib.h"
+#include "../lib/std/kllib.h"
 
 #ifdef _WIN32
-#define OS "Windows 32"
+#define OS "Windows"
 #elif _WIN64
-#define OS "Windows 64"
+#define OS "Windows"
 #elif __APPLE__ || __MACH__
 #define OS "OSX"
 #elif __linux__
@@ -47,28 +47,29 @@ int main (int argc, char** argv)
     kl_lib_std_init ();
 
     // Initialize the compiler
-    kl_lex_compiler_init ();
+    kl_parse_compiler_init ();
 
     // Create Value* for argv
     Value* _argv_ = malloc (sizeof (Value) * argc);
-    for (size_t i = 0; i < argc; ++ i)
+    for (int i = 0; i < argc; ++ i)
         _argv_[i] = VALUE_STR (argv[i]);
 
     // Add Variables with System Information & Universal-Constants
-    kl_lex_add_variable (&variables, &variables_count, "local", "_OS_",   true, VALUE_STR   (OS));
-    kl_lex_add_variable (&variables, &variables_count, "local", "_PI_",   true, VALUE_FLOAT (3.1415926535));
-    kl_lex_add_variable (&variables, &variables_count, "local", "_E_",    true, VALUE_FLOAT (2.7182818284));
-    kl_lex_add_variable (&variables, &variables_count, "local", "_argc_", true, VALUE_INT   (argc));
-    kl_lex_add_variable (&variables, &variables_count, "local", "_argv_", true, VALUE_LIST  (
+    kl_parse_add_variable (&variables, &variables_count, "local", "null",   true, VALUE_INT   (0));
+    kl_parse_add_variable (&variables, &variables_count, "local", "_OS_",   true, VALUE_STR   (OS));
+    kl_parse_add_variable (&variables, &variables_count, "local", "_PI_",   true, VALUE_FLOAT (3.1415926535));
+    kl_parse_add_variable (&variables, &variables_count, "local", "_E_",    true, VALUE_FLOAT (2.7182818284));
+    kl_parse_add_variable (&variables, &variables_count, "local", "_argc_", true, VALUE_INT   (argc));
+    kl_parse_add_variable (&variables, &variables_count, "local", "_argv_", true, VALUE_LIST  (
         _argv_,
         argc
     ));
 
     // Translate to Koala-Register format
-    kl_lex_compile (kl_util_read_file (argv[1]), &variables, &variables_count, true);
+    kl_parse_compile (kl_util_read_file (argv[1]), &variables, &variables_count, true);
 
     // Execute Koala's registers
-    kl_lex_compiler_run ();
+    kl_parse_compiler_run ();
 
     // Free Value*
     free (_argv_);

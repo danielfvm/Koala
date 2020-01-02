@@ -1,5 +1,5 @@
 #include "gnumber.h"
-#include "lexer.h"
+#include "parser.h"
 
 #include "gnumber.h"
 
@@ -91,8 +91,13 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
         if (!in_char && !in_string && calc[i] == ']')
             in_square_brackets --;
 
-        if (!in_string && !in_char && !in_curly_brackets && !in_parentheses_brackets && !in_square_brackets && (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/' || calc[i] == '%'))
-            *size += 2;
+        if (!in_string && 
+            !in_char && 
+            !in_curly_brackets && 
+            !in_parentheses_brackets && 
+            !in_square_brackets && 
+            (calc[i] == '+' || calc[i] == '-' || calc[i] == '*' || calc[i] == '/' || calc[i] == '%'))
+                *size += 2;
     }
 
     // Allocate memory to array containing values
@@ -149,7 +154,11 @@ void _gna_conv_to_registry_calculation (Value** array, const char* calc, size_t*
 
         // Moves index till no compute was found, or value was found
         // Used to allow using ´+´ or ´-´ after ´*´ or ´/´ (used for negative values, no brackets needed)
-        for (j = 1; i + j < calc_len && (calc[i+j] == '+' || calc[i+j] == '-' || calc[i+j] == '*' || calc[i+j] == '/' || calc[i+j] == '%'); ++ j, ++ i);
+        for (
+            j = 1; 
+            i + j < calc_len && (calc[i+j] == '+' || calc[i+j] == '-' || calc[i+j] == '*' || calc[i+j] == '/' || calc[i+j] == '%'); 
+            ++ j, ++ i
+        );
     }
 
     // Insert value
@@ -261,8 +270,13 @@ void _gna_conv_to_registry_boolean_algebra (Value** array, const char* calc, siz
         if (!in_char && !in_string && calc[i] == ']')
             in_square_brackets --;
 
-        if (!in_string && !in_char && !in_curly_brackets && !in_parentheses_brackets && !in_square_brackets && (calc[i] == '&' || calc[i] == '|'))
-            *size += 2;
+        if (!in_string && 
+            !in_char && 
+            !in_curly_brackets && 
+            !in_parentheses_brackets && 
+            !in_square_brackets && 
+            (calc[i] == '&' || calc[i] == '|'))
+                *size += 2;
     }
 
     // Allocate memory to array containing values

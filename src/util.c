@@ -6,22 +6,34 @@
 
 char* kl_util_read_file (const char* filepath)
 {
-    char* buffer = NULL;
-    FILE* file   = NULL;
-    size_t len;
-    
-    if ((file = fopen (filepath, "r")) == NULL)
-    {
-        fprintf (stderr, "Failed to open file ´%s´\n", filepath);
-        exit (EXIT_FAILURE);
-    }
+    FILE*  file;
+    char*  buffer;
+    size_t size;
 
-    if (getdelim (&buffer, &len, '\0', file) == -1)
-        return NULL;
+    if (!(file = fopen (filepath, "r"))) 
+        fprintf (stderr, "Failed to open file ´%s´\n", filepath), exit (EXIT_FAILURE);
+
+    fseek (file , 0L, SEEK_END);
+    size = ftell (file);
+    rewind (file);
+
+    /* allocate memory for entire content */
+    if (!(buffer = calloc (1, size + 1)))
+        fprintf (stderr, "Memory alloc failed in ´kl_util_read_file´\n"), exit (EXIT_FAILURE);
+
+    /* copy the file into the buffer */
+    if(!fread (buffer, size, 1, file))
+        fclose(file), free (buffer), fprintf (stderr, "Reading failed in ´kl_util_read_file´\n"), exit (EXIT_FAILURE);
 
     fclose (file);
 
     return buffer;
+}
+
+void kl_util_trim_front_end (char** str)
+{
+    (*str) ++;
+    (*str)[strlen (*str) - 1] = '\0';
 }
 
 bool kl_util_has_illigal_ascii (const char* text)
@@ -125,7 +137,7 @@ int kl_util_find_next_bracket (size_t p, const char* text)
     }
 
     // Closing bracket not found!
-    return -1;
+    return NOT_FOUND;
 }
 
 char* kl_util_substr (const char *src, int m, int n)
@@ -402,7 +414,7 @@ char* kl_util_str_replace (char* orig, char* rep, char* with)
 
     // count the number of replacements needed
     ins = orig;
-    for (count = 0; tmp = strstr (ins, rep); ++count)
+    for (count = 0; (tmp = strstr (ins, rep)); ++count)
         ins = tmp + len_rep;
 
     tmp = result = malloc (strlen (orig) + (len_with - len_rep) * count + 1);

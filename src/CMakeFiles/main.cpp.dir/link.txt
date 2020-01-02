@@ -1,0 +1,1 @@
+/usr/bin/cc -g  -rdynamic CMakeFiles/main.cpp.dir/gnumber.c.o CMakeFiles/main.cpp.dir/multisearcher.c.o CMakeFiles/main.cpp.dir/interpreter.c.o CMakeFiles/main.cpp.dir/parser.c.o CMakeFiles/main.cpp.dir/util.c.o CMakeFiles/main.cpp.dir/library.c.o  -o main.cpp 
