@@ -2,9 +2,10 @@
 
 #include <inttypes.h>
 #include <string.h>
+#include <time.h>
 #include <math.h>
 
-Value kl_lib_std_getVersion (int argc, Value* argv) {
+Value kl_lib_std_getVersion (__attribute__((unused)) int argc, __attribute__((unused)) Value* argv) {
     return VALUE_STR (KOALA_VERSION);
 }
 
@@ -109,7 +110,15 @@ Value kl_lib_std_readFile (int argc, Value* argv) {
     return VALUE_INT (true);
 }
 
+Value kl_lib_std_rand (int argc, Value* argv) {
+    if (argc <= 0 || (argv[0].data_type != DT_INT && argv[0].data_type != DT_FLOAT))
+        return VALUE_FLOAT ((double) rand() / RAND_MAX);
+    return VALUE_INT (rand () % (int) NUMBER (argv[0]));
+}
+
 void kl_lib_std_init () {
+    srand (time (NULL));
+
     kl_lib_add_function ("getVersion",  kl_lib_std_getVersion);
     kl_lib_add_function ("len",         kl_lib_std_len);
     kl_lib_add_function ("exit",        kl_lib_std_exit);
@@ -119,6 +128,7 @@ void kl_lib_std_init () {
     kl_lib_add_function ("tan",         kl_lib_std_tan);
     kl_lib_add_function ("sqrt",        kl_lib_std_sqrt);
     kl_lib_add_function ("readFile",    kl_lib_std_readFile);
-    kl_lib_add_function ("list",       kl_lib_std_list);
-    kl_lib_add_function ("range",      kl_lib_std_range);
+    kl_lib_add_function ("list",        kl_lib_std_list);
+    kl_lib_add_function ("range",       kl_lib_std_range);
+    kl_lib_add_function ("rand",        kl_lib_std_rand);
 }

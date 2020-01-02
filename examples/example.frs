@@ -1,18 +1,77 @@
 inc "examples/std.frs";
 
+::mul(l, x) {
+    l, i -> l[i] = l[i] * x;
+    ret l;
+}
+
+::forEach(l, f) {
+    l, i -> l[i] = f (l[i]);
+    ret l;
+}
+
+var myList = 0..10;
+
+myList = myList::forEach((x) {
+    ret x * (-1);
+});
+
+O: myList, '\n';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <* TODO: multi [][] *>
 <* do TODOs from code *>
 <* changing size *>
-
-
-var t = 0;
-
-var x = $t;
-
-O: x, ' ', ~x, '\n';
-
-~x > O: "INF Loop!\n";
-
 
 <*
 var x = [12, 43];

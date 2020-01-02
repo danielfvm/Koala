@@ -77,7 +77,7 @@ void warning (const char* msg, const void* variablen, ...)
     int nDigits = floor (log10 (abs (line_number))) + 1;
 
     char* arrow = malloc (nDigits * 3 + 1);
-    size_t i;
+    int i;
 
     *arrow = '\0';
     for (i = 0; i < nDigits; ++ i)
@@ -96,12 +96,12 @@ void warning (const char* msg, const void* variablen, ...)
 
 void cms_find (const char* text, CmsTemplate* cms_template)
 {
-    size_t text_i, text_size, text_char, text_char_i;
+    size_t text_i, text_size, text_char_i;
     size_t template_i, template_size;
     size_t i;
 
     size_t template_syntax_i;
-    char   template_char;
+    char   template_char, text_char;
 
     size_t template_data_size;
     char*  template_syntax;
@@ -175,7 +175,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                     // Reached end of template's syntax
                     int old_cms_line_number = cms_line_number;
                     if (cms_template->list[template_i].callback != NULL) 
-                        cms_template->list[template_i].callback (data, template_data_size);
+                        cms_template->list[template_i].callback (data);
                     cms_line_number = old_cms_line_number;
                     text_i = text_char_i - 1; // skip to last point found TODO: Add option for ´MULTIPLE_MODE´
                     break;
@@ -196,7 +196,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
 
                 if (template_char == '$' || template_char == '#' || template_char == '%')
                 {
-                    int new_text_char_i = text_char_i;
+                    size_t new_text_char_i = text_char_i;
 
                     // next ´template_syntax´ with > ' '
                     for (i = template_syntax_i + 1; template_syntax[i] <= ' '; ++ i);
@@ -234,7 +234,7 @@ void cms_find (const char* text, CmsTemplate* cms_template)
                     }
 
                     // Size of new ´data_str´
-                    int  size = new_text_char_i - text_char_i;
+                    size_t size = new_text_char_i - text_char_i;
                     char data_str[size];
 
                     // Copy data to ´data_str´

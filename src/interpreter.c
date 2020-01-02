@@ -522,7 +522,7 @@ byte kl_intp_get_data_type (Value value)
     return kl_intp_get_memory_value (value).data_type;
 }
 
-byte kl_intp_get_size (Value value)
+size_t kl_intp_get_size (Value value)
 {
     return kl_intp_get_memory_value (value).size;
 }
@@ -636,7 +636,7 @@ int kl_intp_run (Registry* _register_list)
         return EXIT_FAILURE;
     }
 
-    size_t size;
+    int size;
 
     // Calculating size of ´register_list´
     for (size = 0; register_list[size]; ++ size);
@@ -646,7 +646,7 @@ int kl_intp_run (Registry* _register_list)
     size_t  stack_size = 0;
 
     // Start interpreting
-    for (size_t i = 0; i < size && i >= 0; ++ i)
+    for (int i = 0; i < size && i >= 0; ++ i)
     {
         Register* reg = register_list[i];
 
@@ -714,6 +714,7 @@ int kl_intp_run (Registry* _register_list)
                     reg->reg_values[0].value = kl_intp_get_memory (reg->reg_values[1]);
                     reg->reg_values[0].data_type = kl_intp_get_data_type (reg->reg_values[1]);
                 }*/
+
                 alloc (&reg->reg_values[0], reg->reg_values[1], reg->reg_values[2]);
                 continue;
             }
@@ -729,7 +730,7 @@ int kl_intp_run (Registry* _register_list)
                 {
                     char* str = kl_intp_get_memory (reg->reg_values[1]);
 
-                    if (index < 0 || index > strlen (str))
+                    if (index < 0 || index > (int) strlen (str))
                         error ("Index ´%d´ out of Stringbounds[%d]", VOID (index), VOID (strlen (str)));
 
                     kl_intp_set_data_type (reg->reg_values[0], DT_CHAR);
@@ -737,7 +738,7 @@ int kl_intp_run (Registry* _register_list)
                 }
                 else if (kl_intp_get_data_type (reg->reg_values[1]) == DT_LIST)
                 {
-                    size_t size = kl_intp_get_size (reg->reg_values[1]);
+                    int size = kl_intp_get_size (reg->reg_values[1]);
 
                     if (index < 0 || index >= size)
                         error ("Index ´%d´ out of Arraybounds[%d]", VOID (index), VOID (size));
@@ -767,13 +768,6 @@ int kl_intp_run (Registry* _register_list)
                         reg->reg_values[2],
                         VALUE_INT (false)
                     ); 
-
-// Delete if ´alloc´ works bug free
-//                    if (value->value != NULL)
-//                        free (value->value);
-//                    value->data_type = kl_intp_get_data_type (reg->reg_values[2]);
-//                    value->value     = kl_intp_get_memory    (reg->reg_values[2]);
-//                    value->size      = kl_intp_get_size      (reg->reg_values[2]);
                 }
                 else
                     error ("DataType does not support indexing", NULL);
@@ -782,6 +776,7 @@ int kl_intp_run (Registry* _register_list)
             case SSET:
             {
                 register_list[(intptr_t)kl_intp_get_memory (reg->reg_values[0])]->reg_values[2].value = VOID (true); // used in ALLOC
+                __attribute__ ((fallthrough));
             case SET:
                 // TODO: FIX ALLOC BUG
                 /*alloc (
@@ -927,7 +922,7 @@ int kl_intp_run (Registry* _register_list)
                     char char_copy = (data_type != DT_CHAR) ? m_value_mul : (intptr_t)(*value);
 
                     (*value) = malloc (new_text_size + 1);
-                    for (i = 0; i < new_text_size; ++ i)
+                    for (i = 0; i < (size_t)new_text_size; ++ i)
                         ((char*)(*value))[i] = char_copy;
                     ((char*)(*value))[i] = '\0';
 

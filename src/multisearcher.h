@@ -3,7 +3,7 @@
 #define CMS_LIST(x) ({ void _() x; _; })
 
 typedef void (*CmsData);
-typedef void (*CmsCallback) (CmsData* data, int size);
+typedef void (*CmsCallback) (CmsData* data);
 
 
 enum CmsOption

@@ -42,16 +42,16 @@ bool kl_util_has_illigal_ascii (const char* text)
         if (!((text[i] >= 'a' && text[i] <= 'z') || 
               (text[i] >= 'A' && text[i] <= 'Z') || 
               (text[i] >= '0' && text[i] <= '9') ||
-               text[i] == '_' || text[i] == '.'))
+               text[i] == '_' || text[i] == '.' || text[i] == ':'))
                 return true;
     return false;
 }
 
 int kl_util_find_string_end (size_t p, const char* text)
 {
-    char string_end;
-    int  string_len;
-    int  old_p = p + 1;
+    size_t string_len;
+    char   string_end;
+    int    old_p = p + 1;
 
     if (p >= (string_len = strlen (text)))
     {
@@ -143,7 +143,7 @@ int kl_util_find_next_bracket (size_t p, const char* text)
 char* kl_util_substr (const char *src, int m, int n)
 {
     unsigned int len = n - m; // length of string
-    unsigned int i;
+    int i;
 
     // allocate (len + 1) chars for destination (+1 for extra null character)
     char *dest = malloc (len + 1);

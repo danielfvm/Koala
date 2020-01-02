@@ -30,7 +30,7 @@
     sleep (x = FLOAT) > S: "sleep $x";
 
     <* STD - clear text in terminal *>
-    clear () > S: "clear";
+    clear () > S: (_OS_ != "Windows") ? "clear" : "cls";
 
     <* STD - For loop *>
     for (min = INT, max = INT, lambda) > (min < max) { 

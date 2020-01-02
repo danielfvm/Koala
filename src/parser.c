@@ -20,12 +20,12 @@ void error (const char* msg, ...)
     }
 
     char* arrow = malloc (nDigits * 3 + 1);
-    size_t i;
+    int i;
 
     *arrow = '\0';
     for (i = 0; i < nDigits; ++ i)
         strcat (arrow, "─");
-    arrow[i * 3 + 1] = '\0';
+    arrow[i * 3] = '\0';
 
     char* line = cms_get_current_line ();
     kl_util_trim (&line);
@@ -345,7 +345,32 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
     // TODO: WRONG POSITION FOR ARGUMENTS
     Value create_call_function (char* func_name, char* func_args, Value (kl_parse_convert_to_value) (char* text))
     {
+        size_t dpoint = kl_util_contains (func_name, ':');
         int kl_lib_id = UNKNOWN;
+
+        if (dpoint && func_name[dpoint] == ':')
+        {
+            char* data_name = kl_util_substr (func_name, 0, dpoint - 1);
+            char* data_args = malloc (strlen (data_name) + 1 + strlen (func_args) + 1);
+            
+            *data_args = '\0';
+            strcat (data_args, data_name);
+
+            if (func_args[0] != '\0')
+            {
+                strcat (data_args, ",");
+                strcat (data_args, func_args);
+            }
+
+            // New function arguments
+            strcpy (func_args = realloc (func_args, strlen (data_args) + 1), data_args);
+
+            // New function name
+            func_name += strlen (func_name) - dpoint - 2;
+
+            free (data_name);
+            free (data_args);
+        }
 
         // Check if function exist
         if ((kl_lib_id = kl_lib_get_function_by_name (func_name)) != UNKNOWN)
@@ -495,6 +520,10 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
             function_path[function_path_size] = '\0';
             function_path = realloc (function_path, function_path_size + 1);
         }
+    
+        // Remove argument variables, outside not reachable!
+        for (size_t i = 0; i < length; ++ i) 
+            var_rem ();
 
         return value_func_position;
     }
@@ -506,14 +535,14 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         kl_util_trim (&text);
 
         // Remove brackets if outside is bracket
-        if (text[0] == '(' && strlen (text) == kl_util_find_next_bracket (0, text) + 1)
+        if (text[0] == '(' && (int) strlen (text) == kl_util_find_next_bracket (0, text) + 1)
         {
             kl_util_trim_front_end (&text); // remove start & end bracket
             kl_util_trim (&text);
         }
 
         // Create list
-        if (text[0] == '[' && strlen (text) == kl_util_find_next_bracket (0, text) + 1)
+        if (text[0] == '[' && (int) strlen (text) == kl_util_find_next_bracket (0, text) + 1)
         {
             kl_util_trim_front_end (&text); // remove start & end bracket
             kl_util_trim (&text);
@@ -534,7 +563,7 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         }
 
         // scope
-        if (text[0] == '{' && strlen (text) == kl_util_find_next_bracket (0, text) + 1) 
+        if (text[0] == '{' && (int) strlen (text) == kl_util_find_next_bracket (0, text) + 1) 
         {
             kl_util_trim_front_end (&text); // remove start & end bracket
             int m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))); // alloc memory for return
@@ -738,7 +767,7 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
 
         if ((func_end_name = kl_util_contains (text, '(')) && 
             (func_end_name > 1) && 
-            (strlen (text) == kl_util_find_next_bracket (func_end_name - 1, text) + 1))
+            ((int) strlen (text) == kl_util_find_next_bracket (func_end_name - 1, text) + 1))
         {
             // function name
             char* func_name = malloc (strlen (text) + 1);
@@ -754,23 +783,17 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
             func_args = realloc (func_args, strlen (text) - func_end_name);
             kl_util_trim (&func_args);
 
-            int kl_lib_id = UNKNOWN;
-
-            // Check if function exist
-            if (var_get_pos_by_name (func_name, false) != -1)
-                return create_call_function (func_name, func_args, kl_parse_convert_to_value);
-            else if ((kl_lib_id = kl_lib_get_function_by_name (func_name)) != UNKNOWN)
-                return call_lib_function (kl_lib_id, func_args, kl_parse_convert_to_value);
+            return create_call_function (func_name, func_args, kl_parse_convert_to_value);
         }
 
         // Lambda
-        size_t func_args_end;
-        size_t func_code_begin, func_code_end;
+        int func_args_end;
+        int func_code_begin, func_code_end;
 
         if ((text[0] == '(') && 
             ((func_args_end = kl_util_find_next_bracket (0, text)) != -1) && /*func_end_name < strlen (text) && */
             ((func_code_begin = kl_util_contains (text, '{') - 1) != -1) && 
-            (strlen (text) == (func_code_end = kl_util_find_next_bracket (func_code_begin, text)) + 1))
+            ((int) strlen (text) == (func_code_end = kl_util_find_next_bracket (func_code_begin, text)) + 1))
         {
             // funcation arguments
             char* func_args = malloc (strlen (text) + 1);
@@ -821,8 +844,8 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
                 return VALUE_INT (var_position);
         }
 
-        size_t bracket_index_open;
-        size_t bracket_index_close;
+        int bracket_index_open;
+        int bracket_index_close;
 
         // returns value/pointer using index of string -> ´char´
         if (((bracket_index_open = kl_util_contains (text, '[')) != 0) && 
@@ -843,13 +866,13 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
             text[bracket_index_open - 1] = old_char;
         }
 
-        size_t var_list_end;
-        size_t var_index_begin, var_index_end;
+        int var_list_end;
+        int var_index_begin, var_index_end;
 
         if ((text[0] == '(') && 
             ((var_list_end = kl_util_find_next_bracket (0, text)) != -1) && 
             ((var_index_begin = kl_util_contains (text + var_list_end, '[') + var_list_end - 1) != -1) && 
-            (strlen (text) == (var_index_end = kl_util_find_next_bracket (var_index_begin, text)) + 1))
+            ((int) strlen (text) == (var_index_end = kl_util_find_next_bracket (var_index_begin, text)) + 1))
         {
             // Variable list
             char* var_list = malloc (strlen (text) + 1);
@@ -883,7 +906,7 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         Value  m_value;
 
         // recieved parameters
-        for (int i = 0; i < length; ++ i) 
+        for (size_t i = 0; i < length; ++ i) 
         {
             // check if kl_util_contains an ´=´
             if ((equal_pos = kl_util_contains (args[i], '=')))
@@ -902,41 +925,41 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         }
     }
 
-    void c_clabel (CmsData* data, int size)
+    void c_clabel (CmsData* data)
     {
         var_add_function_path ("local", data[0], kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (kl_intp_get_current_register_position (&register_list)))), true);
     }
 
-    void c_set_index (CmsData* data, int size) 
+    void c_set_index (CmsData* data) 
     { 
         kl_intp_register_add (&register_list, REGISTER_IND_SET (POINTER (var_get_pos_by_name (data[0], true)), kl_parse_convert_to_value (data[1]), kl_parse_convert_to_value (data[2])));
     }
 
-    void c_alloc (CmsData* data, int size) { kl_parse_do_alloc (data[0], false); }
+    void c_alloc (CmsData* data) { kl_parse_do_alloc (data[0], false); }
 
-    void c_alloc_const (CmsData* data, int size) { kl_parse_do_alloc (data[0], true); }
+    void c_alloc_const (CmsData* data) { kl_parse_do_alloc (data[0], true); }
 
-    void c_jlabel (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_JUMP (kl_parse_convert_to_value (data[0]))); }
+    void c_jlabel (CmsData* data) { kl_intp_register_add (&register_list, REGISTER_JUMP (kl_parse_convert_to_value (data[0]))); }
 
-    void c_set (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_SET (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_parse_convert_to_value (data[1]))); }
+    void c_set (CmsData* data) { kl_intp_register_add (&register_list, REGISTER_SET (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_parse_convert_to_value (data[1]))); }
 
-    void c_add (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_parse_convert_to_value (data[1]))); }
+    void c_add (CmsData* data) { kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_parse_convert_to_value (data[1]))); }
 
-    void c_sub (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_SUB (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_parse_convert_to_value (data[1]))); }
+    void c_sub (CmsData* data) { kl_intp_register_add (&register_list, REGISTER_SUB (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_parse_convert_to_value (data[1]))); }
 
-    void c_mul (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_MUL (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_parse_convert_to_value (data[1]))); }
+    void c_mul (CmsData* data) { kl_intp_register_add (&register_list, REGISTER_MUL (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_parse_convert_to_value (data[1]))); }
 
-    void c_div (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_DIV (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_parse_convert_to_value (data[1]))); }
+    void c_div (CmsData* data) { kl_intp_register_add (&register_list, REGISTER_DIV (VALUE_INT (var_get_pos_by_name (data[0], true)), kl_parse_convert_to_value (data[1]))); }
 
-    void c_set_pointer (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_SET (kl_parse_convert_to_value (data[0]), kl_parse_convert_to_value (data[1]))); }
+    void c_set_pointer (CmsData* data) { kl_intp_register_add (&register_list, REGISTER_SET (kl_parse_convert_to_value (data[0]), kl_parse_convert_to_value (data[1]))); }
 
-    void c_add_pointer (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_ADD (kl_parse_convert_to_value (data[0]), kl_parse_convert_to_value (data[1]))); }
+    void c_add_pointer (CmsData* data) { kl_intp_register_add (&register_list, REGISTER_ADD (kl_parse_convert_to_value (data[0]), kl_parse_convert_to_value (data[1]))); }
 
-    void c_sub_pointer (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_SUB (kl_parse_convert_to_value (data[0]), kl_parse_convert_to_value (data[1]))); }
+    void c_sub_pointer (CmsData* data) { kl_intp_register_add (&register_list, REGISTER_SUB (kl_parse_convert_to_value (data[0]), kl_parse_convert_to_value (data[1]))); }
 
-    void c_mul_pointer (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_MUL (kl_parse_convert_to_value (data[0]), kl_parse_convert_to_value (data[1]))); }
+    void c_mul_pointer (CmsData* data) { kl_intp_register_add (&register_list, REGISTER_MUL (kl_parse_convert_to_value (data[0]), kl_parse_convert_to_value (data[1]))); }
 
-    void c_div_pointer (CmsData* data, int size) { kl_intp_register_add (&register_list, REGISTER_DIV (kl_parse_convert_to_value (data[0]), kl_parse_convert_to_value (data[1]))); }
+    void c_div_pointer (CmsData* data) { kl_intp_register_add (&register_list, REGISTER_DIV (kl_parse_convert_to_value (data[0]), kl_parse_convert_to_value (data[1]))); }
 
     void do_list_statements (char* data, Register* (reg)(Value value))
     {
@@ -950,21 +973,21 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         args = NULL;
     }
 
-    void c_print (CmsData* data, int size)   { do_list_statements (data[0], REGISTER_PRINT); }
+    void c_print (CmsData* data)   { do_list_statements (data[0], REGISTER_PRINT); }
 
-    void c_flush (CmsData* data, int size)   { do_list_statements (data[0], REGISTER_FLUSH); }
+    void c_flush (CmsData* data)   { do_list_statements (data[0], REGISTER_FLUSH); }
 
-    void c_input (CmsData* data, int size)   { do_list_statements (data[0], REGISTER_READ); }
+    void c_input (CmsData* data)   { do_list_statements (data[0], REGISTER_READ); }
 
-    void c_getchar (CmsData* data, int size) { do_list_statements (data[0], REGISTER_READ_CHAR); }
+    void c_getchar (CmsData* data) { do_list_statements (data[0], REGISTER_READ_CHAR); }
 
-    void c_system (CmsData* data, int size)  { do_list_statements (data[0], REGISTER_SYS); }
+    void c_system (CmsData* data)  { do_list_statements (data[0], REGISTER_SYS); }
 
-    void c_push (CmsData* data, int size) { do_list_statements (data[0], REGISTER_PUSH); }
+    void c_push (CmsData* data) { do_list_statements (data[0], REGISTER_PUSH); }
 
-    void c_pop (CmsData* data, int size) { do_list_statements (data[0], REGISTER_POP); }
+    void c_pop (CmsData* data) { do_list_statements (data[0], REGISTER_POP); }
 
-    void c_check (CmsData* data, int size)
+    void c_check (CmsData* data)
     {
         Value  m_value = kl_parse_convert_to_value (data[0]);
         size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value));
@@ -974,13 +997,33 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         register_list[x]->reg_values[2] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
     }
 
-    void c_check_short (CmsData* data, int size)
+    void c_check_unref (CmsData* data)
     {
-        strcat (data[1] = realloc (data[1], strlen (data[1]) + 2), ";");
-        c_check (data, size);
+        char* var = malloc (strlen (data[0]) + 1);
+        sprintf (var, "~%s", (char*) data[0]);
+        free (data[0]);
+        data[0] = var;
+        c_check (data);
+        free (var);
     }
 
-    void c_ncheck (CmsData* data, int size)
+    void c_check_short (CmsData* data)
+    {
+        strcat (data[1] = realloc (data[1], strlen (data[1]) + 2), ";");
+        c_check (data);
+    }
+
+    void c_check_short_unref (CmsData* data)
+    {
+        char* var = malloc (strlen (data[0]) + 1);
+        sprintf (var, "~%s", (char*) data[0]);
+        free (data[0]);
+        data[0] = var;
+        c_check_short (data);
+        free (var);
+    }
+
+    void c_ncheck (CmsData* data)
     {
         Value  m_value = kl_parse_convert_to_value (data[0]);
         size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value));
@@ -990,13 +1033,13 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         register_list[x]->reg_values[2] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
     }
 
-    void c_ncheck_short (CmsData* data, int size)
+    void c_ncheck_short (CmsData* data)
     {
         strcat (data[1] = realloc (data[1], strlen (data[1]) + 2), ";");
-        c_ncheck (data, size);
+        c_ncheck (data);
     }
 
-    void c_loop_indexing (CmsData* data, int size)
+    void c_loop_indexing (CmsData* data)
     {
         size_t var_index;
         size_t var_value;
@@ -1032,13 +1075,13 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         var_rem ();
     }
 
-    void c_loop_indexing_short (CmsData* data, int size)
+    void c_loop_indexing_short (CmsData* data)
     {
         strcat (data[2] = realloc (data[2], strlen (data[2]) + 2), ";");
-        c_loop_indexing (data, size);
+        c_loop_indexing (data);
     }
 
-    void c_loop (CmsData* data, int size)
+    void c_loop (CmsData* data)
     {
         size_t loop_index = kl_intp_get_current_register_position (&register_list);
 
@@ -1051,33 +1094,33 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         register_list[x]->reg_values[2] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
     }
 
-    void c_loop_unref (CmsData* data, int size)
+    void c_loop_unref (CmsData* data)
     {
         char* var = malloc (strlen (data[0]) + 1);
         sprintf (var, "~%s", (char*) data[0]);
         free (data[0]);
         data[0] = var;
-        c_loop (data, size);
+        c_loop (data);
         free (var);
     }
 
-    void c_loop_short (CmsData* data, int size)
+    void c_loop_short (CmsData* data)
     {
         strcat (data[1] = realloc (data[1], strlen (data[1]) + 2), ";");
-        c_loop (data, size);
+        c_loop (data);
     }
 
-    void c_loop_short_unref (CmsData* data, int size)
+    void c_loop_short_unref (CmsData* data)
     {
         char* var = malloc (strlen (data[0]) + 1);
         sprintf (var, "~%s", (char*) data[0]);
         free (data[0]);
         data[0] = var;
-        c_loop_short (data, size);
+        c_loop_short (data);
         free (var);
     }
 
-    void c_check_else (CmsData* data, int size)
+    void c_check_else (CmsData* data)
     {
         Value  m_value = kl_parse_convert_to_value (data[0]);
         size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value));
@@ -1094,7 +1137,17 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         register_list[y]->reg_values[0] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
     }
 
-    void c_ncheck_else (CmsData* data, int size)
+    void c_check_else_unref (CmsData* data)
+    {
+        char* var = malloc (strlen (data[0]) + 1);
+        sprintf (var, "~%s", (char*) data[0]);
+        free (data[0]);
+        data[0] = var;
+        c_check_else (data);
+        free (var);
+    }
+
+    void c_ncheck_else (CmsData* data)
     {
         Value  m_value = kl_parse_convert_to_value (data[0]);
         size_t m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (m_value));
@@ -1111,15 +1164,15 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         register_list[y]->reg_values[0] = VALUE_INT (kl_intp_get_current_register_position (&register_list));
     }
 
-    void c_function (CmsData* data, int size) { create_function (data[0], data[1], data[2], kl_parse_convert_to_value); }
+    void c_function (CmsData* data) { create_function (data[0], data[1], data[2], kl_parse_convert_to_value); }
 
-    void c_function_short (CmsData* data, int size)
+    void c_function_short (CmsData* data)
     {
         strcat (data[2] = realloc (data[2], strlen (data[2]) + 2), ";");
         create_function (data[0], data[1], data[2], kl_parse_convert_to_value);
     }
 
-    void c_function_ret (CmsData* data, int size)
+    void c_function_ret (CmsData* data)
     {
         char* f_code = malloc (4 + strlen (data[2]) + 1 + 1);
         sprintf (f_code, "ret %s;", (char*) data[2]);
@@ -1128,13 +1181,13 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         f_code = NULL;
     }
 
-    void c_call (CmsData* data, int size) { create_call_function (data[0], data[1], kl_parse_convert_to_value); }
+    void c_call (CmsData* data) { create_call_function (data[0], data[1], kl_parse_convert_to_value); }
 
-    void c_return (CmsData* data, int size)
+    void c_return (CmsData* data)
     {
         if (in_function > 0) // function
         {
-            if (size > 0) kl_intp_register_add (&register_list, REGISTER_SET (VALUE_INT (in_function + 3), kl_parse_convert_to_value (data[0])));
+            if (data != NULL) kl_intp_register_add (&register_list, REGISTER_SET (VALUE_INT (in_function + 3), kl_parse_convert_to_value (data[0])));
             kl_intp_register_add (&register_list, REGISTER_JUMP (POINTER (in_function + 2)));
         }
         else if (in_function == 0) // main
@@ -1145,12 +1198,12 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         {
             if (scope_jump_back_size >= 100)
                 error ("Maximum ´ret´ amount in ´scope´ of 100 has been reached!", NULL);
-            if (size > 0) kl_intp_register_add (&register_list, REGISTER_SET (VALUE_INT (abs(in_function)), kl_parse_convert_to_value (data[0])));
+            if (data != NULL) kl_intp_register_add (&register_list, REGISTER_SET (VALUE_INT (abs(in_function)), kl_parse_convert_to_value (data[0])));
             scope_jump_back[scope_jump_back_size ++] = kl_intp_register_add (&register_list, REGISTER_JUMP (VALUE_INT (-1)));
         }
     }
 
-    void c_scope (CmsData* data, int size)
+    void c_scope (CmsData* data)
     {
         int m_index = kl_intp_register_add (&register_list, REGISTER_ALLOC (VALUE_INT (0))); // alloc memory for return
         int old_in_function = in_function;
@@ -1166,7 +1219,7 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         in_function = old_in_function; // restore old ´in_function´
     }
 
-    void c_include (CmsData* data, int size)
+    void c_include (CmsData* data)
     {
         int old_line = cms_get_current_line_number ();
         cms_set_current_line_number (0);
@@ -1230,6 +1283,9 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         cms_add ("( % ) { % } { % }",   c_check_else,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) { % }",         c_check,        CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ) > % ;",         c_check_short,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("~ # { % } { % }",     c_check_else_unref,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("~ # { % }",           c_check_unref,        CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("~ # > % ;",           c_check_short_unref,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# { % } { % }",       c_check_else,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# { % }",             c_check,        CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# > % ;",             c_check_short,  CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);

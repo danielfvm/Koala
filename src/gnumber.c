@@ -372,8 +372,7 @@ Value gna_registry_boolean_algebra (Registry** register_list, const char* calc, 
         // Calculating mul or div depending on compute
         if (compute == '&')
             kl_intp_register_add (register_list, REGISTER_AND (VALUE_INT (alloc_value), array[i + 1]));
-        else
-            ; // TODO: Error!!! Unknown Compute!
+//        else ; // TODO: Error!!! Unknown Compute!
 
         // Override changes over the rest of the array 
         for (j = i; j < size - 2; ++ j)
@@ -393,8 +392,7 @@ Value gna_registry_boolean_algebra (Registry** register_list, const char* calc, 
     {
         if ((intptr_t)array[i].value == '|')
             kl_intp_register_add (register_list, REGISTER_OR (VALUE_INT (m_pos), array[i + 1]));
-        else
-            ; // TODO: Error!!! Unknown compute!
+//        else ; // TODO: Error!!! Unknown compute!
     }
 
     free (array);
