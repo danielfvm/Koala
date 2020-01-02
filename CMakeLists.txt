@@ -19,5 +19,5 @@ add_subdirectory(src)
 
 install(
     TARGETS koala
-    DESTINATION /use/bin/
+    DESTINATION /usr/bin/
 )
