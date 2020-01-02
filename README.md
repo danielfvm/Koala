@@ -6,6 +6,7 @@ A small Interpreter Language
 ```
 $ git clone https://github.com/danielfvm/Koala
 $ cd Koala
+$ cmake .
 $ make
 $ make install
 ```
