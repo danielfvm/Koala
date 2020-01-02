@@ -1,3 +1,9 @@
 /bin
 /CMakeFiles
+/cmake_install.cmake
+/CMakeCache.txt
+/install_manifest.txt
+/Makefile
+/src/Makefile
 /src/CMakeFiles
+/src/cmake_install.cmake
