@@ -69,6 +69,8 @@
     <* STD - cast to int *>
     int (x) < INT + x;
 
+    float (x) < FLOAT + x;
+
     <* STD - cast to string *>
     str (x) < STR + x;
 

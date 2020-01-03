@@ -70,30 +70,6 @@ void cms_set_current_line_number (int line_number)
     cms_line_number = line_number;
 }
 
-
-void warning (const char* msg, const void* variablen, ...)
-{
-    int line_number = cms_get_current_line_number ();
-    int nDigits = floor (log10 (abs (line_number))) + 1;
-
-    char* arrow = malloc (nDigits * 3 + 1);
-    int i;
-
-    *arrow = '\0';
-    for (i = 0; i < nDigits; ++ i)
-        strcat (arrow, "─");
-    arrow[i * 3 + 1] = '\0';
-
-    char* line = cms_get_current_line ();
-    kl_util_trim (&line);
-    fprintf (stderr, "\x1b[90m[\x1b[33m%d\x1b[90m]\x1b[92m─►\x1b[93m %s\n \x1b[92m└%s─► \x1b[95m(WARN) ", line_number, line, arrow);
-    fprintf (stderr, msg, variablen);
-    fprintf (stderr, "\x1b[0m\n");
-
-    free (arrow);
-}
-
-
 void cms_find (const char* text, CmsTemplate* cms_template)
 {
     size_t text_i, text_size, text_char_i;

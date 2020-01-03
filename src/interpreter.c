@@ -155,6 +155,18 @@ Register* CREATE_REGISTER_3 (byte type, Value one, Value two, Value three)
     return reg;
 }
 
+Register* CREATE_REGISTER_4 (byte type, Value one, Value two, Value three, Value four)
+{
+    Register* reg   = malloc (sizeof *reg);
+    reg->reg_values = malloc (sizeof *reg->reg_values * 4);
+    reg->reg_type   = type;
+    reg->reg_values[0] = one;
+    reg->reg_values[1] = two;
+    reg->reg_values[2] = three;
+    reg->reg_values[3] = four;
+    return reg;
+}
+
 Register* REGISTER_ALLOC (Value m_value) 
 { 
     return CREATE_REGISTER_3 (
@@ -260,6 +272,17 @@ Register* REGISTER_IND_SET (Value m_value, Value m_index, Value m_set)
         IND_SET,
         m_value,
         m_index,
+        m_set
+    );
+}
+
+Register* REGISTER_IND_IND_SET (Value m_value, Value m_index1, Value m_index2, Value m_set)
+{
+    return CREATE_REGISTER_4 (
+        IND_IND_SET,
+        m_value,
+        m_index1,
+        m_index2,
         m_set
     );
 }
@@ -453,7 +476,7 @@ void kl_intp_strcpy (char** dest, const char* src)
 
 Registry* register_list;
 
-bool  kl_intp_set_pointer (size_t m_index, Value m_value)
+extern inline bool kl_intp_set_pointer (size_t m_index, Value m_value)
 {
     if (register_list[m_index]->reg_type != ALLOC)
         return false;
@@ -461,21 +484,22 @@ bool  kl_intp_set_pointer (size_t m_index, Value m_value)
     return true;
 }
 
-Value kl_intp_get_pointer (size_t m_index)
+extern inline Value kl_intp_get_pointer (size_t m_index)
 {
     return register_list[m_index]->reg_values[0];
 }
 
-Value kl_intp_get_memory_value (Value value)
+int max_size; // TODO: Might not be -1 -> maybe too small
+
+extern inline Value kl_intp_get_memory_value (Value value)
 {
     if (value.data_type == DT_POINTER || value.data_type == DT_POINTER_POINTER)
     {
-        int max_size = kl_intp_get_current_register_position (&register_list) - 1; // TODO: Might not be -1 -> maybe too small
         if ((intptr_t) value.value < 0 || (intptr_t) value.value >= max_size)
             error ("Pointing on ´%p´ doesn't exist as Register!", (int) (intptr_t) value.value);
         if (register_list[(intptr_t) value.value]->reg_type != ALLOC)
             error ("Register ´%p´ isn't a Memory Register!", (int) (intptr_t) value.value);
-            
+          
         Value v1 = register_list[(intptr_t) value.value]->reg_values[0];
         if (value.data_type == DT_POINTER)
             return v1;
@@ -491,38 +515,38 @@ Value kl_intp_get_memory_value (Value value)
     return value;
 }
 
-void* kl_intp_get_memory (Value value)
+extern inline void* kl_intp_get_memory (Value value)
 {
     return kl_intp_get_memory_value (value).value;
 }
 
-void kl_intp_set_memory (Value value, void* new_value)
+extern inline void kl_intp_set_memory (Value value, void* new_value)
 {
     register_list[(intptr_t) kl_intp_get_memory (value)]->reg_values[0].value = new_value;
 }
 
-void kl_intp_set_size (Value value, size_t new_size)
+extern inline void kl_intp_set_size (Value value, size_t new_size)
 {
     register_list[(intptr_t) kl_intp_get_memory (value)]->reg_values[0].size = new_size;
 }
 
-void kl_intp_set_memory_float (Value value, float new_value)
+extern inline void kl_intp_set_memory_float (Value value, float new_value)
 {
     (*(float*)register_list[(intptr_t) kl_intp_get_memory (value)]->reg_values[0].value) = new_value;
 }
 
 
-void kl_intp_set_data_type (Value value, int new_data_type)
+extern inline void kl_intp_set_data_type (Value value, int new_data_type)
 {
     register_list[(intptr_t) kl_intp_get_memory (value)]->reg_values[0].data_type = new_data_type;
 }
 
-byte kl_intp_get_data_type (Value value)
+extern inline byte kl_intp_get_data_type (Value value)
 {
     return kl_intp_get_memory_value (value).data_type;
 }
 
-size_t kl_intp_get_size (Value value)
+extern inline size_t kl_intp_get_size (Value value)
 {
     return kl_intp_get_memory_value (value).size;
 }
@@ -557,7 +581,8 @@ void print (Value value)
         for (size_t i = 0; i < size; ++ i)
         {
             print (((Value*) kl_intp_get_memory (value))[i]);
-            if (i != size - 1) printf (", ");
+            if (i != size - 1) 
+                printf (", ");
         }
 
         printf ("]");
@@ -575,6 +600,17 @@ bool equ (Value v_one, Value v_two)
         return kl_intp_get_as_number (v_one) == kl_intp_get_as_number (v_two);
 }
 
+void free_value (Value* value)
+{
+    if (value->data_type == DT_LIST)
+        for (int m_i = 0; m_i < value->size; ++ m_i)
+            free_value (&(((Value*) value->value)[m_i]));
+    if (value->size != NO_SIZE)
+        free (value->value);
+    value->size = NO_SIZE;
+    value->value = NULL;
+}
+
 void alloc (Value* save, Value stored, Value sset)
 {
     if (sset.value) // do not ALLOC if SET was called on this memory!
@@ -583,35 +619,35 @@ void alloc (Value* save, Value stored, Value sset)
         return;
     }
 
-    byte   def_data_type = kl_intp_get_data_type (stored);
-    void*  def_value     = kl_intp_get_memory    (stored);
-    size_t def_size      = kl_intp_get_size      (stored);
+    byte  def_data_type = kl_intp_get_data_type (stored);
+    void* def_value     = kl_intp_get_memory    (stored);
+    int   def_size      = kl_intp_get_size      (stored);
 
     if (def_data_type == DT_STRING)
     {
-        size_t text_size = strlen (def_value) + 1;
-        save->value = (save->value != NULL) ? realloc (save->value, text_size) : malloc (text_size);
+        def_size = strlen (def_value) + 1;
+        save->value = (save->size != NO_SIZE) ? realloc (save->value, def_size) : malloc (def_size);
         strcpy (save->value, def_value);
     }
     else if (def_data_type == DT_FLOAT)
     {
-        if (save->value == NULL)
-            save->value = malloc (sizeof (float)); 
-        (*(float*)save->value) = (float)kl_intp_get_as_number (stored);
+        if (save->size == NO_SIZE)
+            save->value = malloc (def_size = sizeof (float)); 
+        (*(float*) save->value) = (float)kl_intp_get_as_number (stored);
     }
     else if (def_data_type == DT_LIST)
     {
-        if (save->value == NULL)
+        if (save->size == NO_SIZE)
             save->value = malloc (sizeof (Value) * def_size); 
-        else
+        else if (save->size != def_size)
             save->value = realloc (save->value, sizeof (Value) * def_size); 
 
         // TODO: Change ALLOC to func for recurs init of STRs, FLOATs & Lists
-        for (size_t m_i = 0; m_i < def_size; ++ m_i)
+        for (int m_i = 0; m_i < def_size; ++ m_i)
         {
             Value value = ((Value*) def_value)[m_i];
-            ((Value*) save->value)[m_i].value = NULL;
-            alloc (&((Value*) save->value)[m_i], value, VALUE_INT (false));
+            (((Value*) save->value)[m_i]) = VALUE_INT (0);
+            alloc (&(((Value*) save->value)[m_i]), value, VALUE_INT (false));
             //((Value*) save->value)[m_i].data_type = kl_intp_get_data_type (value);
             //((Value*) save->value)[m_i].value     = kl_intp_get_memory    (value);
             //((Value*) save->value)[m_i].size      = kl_intp_get_size      (value);
@@ -619,6 +655,10 @@ void alloc (Value* save, Value stored, Value sset)
     }
     else
     {
+        if (save->size != NO_SIZE)
+            free_value (save);
+        def_size = NO_SIZE;
+
         save->value = kl_intp_get_memory (stored);
     }
 
@@ -629,6 +669,8 @@ void alloc (Value* save, Value stored, Value sset)
 int kl_intp_run (Registry* _register_list)
 {
     register_list = _register_list;
+
+    max_size = kl_intp_get_current_register_position (&register_list) - 1;
 
     if (!register_list)
     {
@@ -667,54 +709,7 @@ int kl_intp_run (Registry* _register_list)
                 continue;
             }
             case ALLOC:
-            {/*
-                if (reg->reg_values[2].value) // do not ALLOC if SET was called on this memory!
-                {
-                    reg->reg_values[2].value = false; // reset SALLOC
-                    continue;
-                }
-
-                if (kl_intp_get_data_type (reg->reg_values[1]) == DT_STRING)
-                {
-                    size_t text_size = strlen (kl_intp_get_memory (reg->reg_values[1])) + 1;
-                    void** ref_value = &reg->reg_values[0].value;
-                    *ref_value = (*ref_value != NULL) ? realloc (*ref_value, text_size) : malloc (text_size);
-                    strcpy (reg->reg_values[0].value, kl_intp_get_memory (reg->reg_values[1]));
-                    reg->reg_values[0].data_type = DT_STRING;
-                }
-                else if (kl_intp_get_data_type (reg->reg_values[1]) == DT_FLOAT)
-                {
-                    if (reg->reg_values[0].value == NULL)
-                        reg->reg_values[0].value = malloc (sizeof (float)); 
-                    (*(float*)reg->reg_values[0].value) = (float)kl_intp_get_as_number (reg->reg_values[1]);
-                    reg->reg_values[0].data_type = DT_FLOAT;
-                }
-                else if (kl_intp_get_data_type (reg->reg_values[1]) == DT_LIST)
-                {
-                    size_t list_size = kl_intp_get_size (reg->reg_values[1]);
-                    if (reg->reg_values[0].value == NULL)
-                        reg->reg_values[0].value = malloc (sizeof (Value) * list_size); 
-//                    else
-  //                      reg->reg_values[0].value = realloc (reg->reg_values[0].value, sizeof (Value) * list_size); 
-
-                    // TODO: Change ALLOC to func for recurs init of STRs, FLOATs & Lists
-                    for (size_t m_i = 0; m_i < list_size; ++ m_i)
-                    {
-                        Value value = ((Value*) kl_intp_get_memory(reg->reg_values[1]))[m_i];
-                        ((Value*)reg->reg_values[0].value)[m_i].data_type = kl_intp_get_data_type (value);
-                        ((Value*)reg->reg_values[0].value)[m_i].value = kl_intp_get_memory (value);
-                        ((Value*)reg->reg_values[0].value)[m_i].size = kl_intp_get_size (value);
-                    }
-
-                    reg->reg_values[0].data_type = DT_LIST;
-                    reg->reg_values[0].size = list_size;
-                }
-                else
-                {
-                    reg->reg_values[0].value = kl_intp_get_memory (reg->reg_values[1]);
-                    reg->reg_values[0].data_type = kl_intp_get_data_type (reg->reg_values[1]);
-                }*/
-
+            {
                 alloc (&reg->reg_values[0], reg->reg_values[1], reg->reg_values[2]);
                 continue;
             }
@@ -743,10 +738,11 @@ int kl_intp_run (Registry* _register_list)
                     if (index < 0 || index >= size)
                         error ("Index ´%d´ out of Arraybounds[%d]", VOID (index), VOID (size));
 
-                    Value value = ((Value*)kl_intp_get_memory (reg->reg_values[1]))[index];
-                    kl_intp_set_data_type (reg->reg_values[0], value.data_type);
-                    kl_intp_set_memory (reg->reg_values[0], value.value);
-                    kl_intp_set_size (reg->reg_values[0], value.size);
+                    alloc (
+                        &register_list[(int)kl_intp_get_as_number (reg->reg_values[0])]->reg_values[0],
+                        ((Value*)kl_intp_get_memory (reg->reg_values[1]))[index],
+                        VALUE_INT (false)
+                    );
                 }
                 else
                     error ("DataType does not support indexing", NULL);
@@ -773,20 +769,45 @@ int kl_intp_run (Registry* _register_list)
                     error ("DataType does not support indexing", NULL);
                 continue;
             }
+            // TODO: Make better system for multiple [][][]...
+            case IND_IND_SET:
+            {
+                if (kl_intp_get_data_type (reg->reg_values[1]) != DT_INT)
+                    error ("Expected DataType ´INT´ for indexing 1", NULL);
+                if (kl_intp_get_data_type (reg->reg_values[2]) != DT_INT)
+                    error ("Expected DataType ´INT´ for indexing 2", NULL);
+                if (kl_intp_get_data_type (reg->reg_values[0]) == DT_LIST)
+                {
+                    Value value = ((Value*)kl_intp_get_memory (reg->reg_values[0]))[(intptr_t) kl_intp_get_memory (reg->reg_values[1])]; 
+                    if (kl_intp_get_data_type (value) != DT_LIST && kl_intp_get_data_type (value) != DT_STRING)
+                        error ("DataType does not support indexing", NULL);
+
+                    alloc (
+                        &((Value*)kl_intp_get_memory (value))[(intptr_t) kl_intp_get_memory (reg->reg_values[2])], 
+                        reg->reg_values[3],
+                        VALUE_INT (false)
+                    ); 
+                }
+                else
+                    error ("DataType does not support indexing", NULL);
+                continue;
+            }
             case SSET:
             {
-                register_list[(intptr_t)kl_intp_get_memory (reg->reg_values[0])]->reg_values[2].value = VOID (true); // used in ALLOC
+                register_list[(intptr_t) kl_intp_get_memory (reg->reg_values[0])]->reg_values[2].value = VOID (true); // used in ALLOC
                 __attribute__ ((fallthrough));
             case SET:
                 // TODO: FIX ALLOC BUG
-                /*alloc (
-                    &reg->reg_values[0],
+                alloc (
+                    &register_list[(int) kl_intp_get_as_number (reg->reg_values[0])]->reg_values[0],
                     reg->reg_values[1],
                     VALUE_INT (false)
-                );*/ 
+                ); 
+/*
                 kl_intp_set_data_type (reg->reg_values[0], kl_intp_get_data_type (reg->reg_values[1]));
                 kl_intp_set_memory    (reg->reg_values[0], kl_intp_get_memory    (reg->reg_values[1]));
                 kl_intp_set_size      (reg->reg_values[0], kl_intp_get_size      (reg->reg_values[1]));
+*/
                 continue;
             }
             case NEG:

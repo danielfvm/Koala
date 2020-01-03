@@ -1,62 +1,113 @@
 inc "examples/std.frs";
 
-<* CRASH TODO: Bug fix
-createMap (width, height) {
-    var map = 0..(width - 1);
-    map, y -> {
-        map[y] = list (height);
-        O: y, "->", map[y], '\n';
-    }
-    ret map;
-}
-*>
-
 val width  = 100;
 val height = 100;
 
-** Size of Array is wrong!!! look in interpreter!
 val surf = width * height;
 var map = list (surf);
 
 ** Fill with random numbers!
-(0..surf-1), i -> map[i] = rand (2);
+map, i -> map[i] = rand (2);
 
 
 renderMap () {
     clear ();
-    (0..(surf-1)), i -> {
-        O: rand (2) ? "██" : "  ";
+    map, i -> {
+        O: map[i] ? "██" : "  ";
         !((i+1) % width) > O: '\n';
     }
 }
 
 updateCells () {
     var newMap = list (surf);
+    var livingCells = 0;
 
-    (0..(surf-1)), i -> {
-        newMap[i] = map[i];
-
-        var livingCells = 0;
+    map, i -> {
+        newMap[i] = 0;
+        livingCells = 0;
 
         livingCells += i - width - 1 < 0 ? 0 : map[i - width - 1];
         livingCells += i - width < 0 ? 0 : map[i - width];
         livingCells += i - width + 1 < 0 ? 0 : map[i - width + 1];
 
-        livingCells += int (i / width) * width >= i - 1 ? 0 : map[i - 1];
-        livingCells += int (i / width) * width <  i - 1 ? 0 : map[i + 1];
+        livingCells += i-1 <  int (i / width) * width ? 0 : map[i - 1];
+        livingCells += i+1 >= int (i / width + 1) * width ? 0 : map[i + 1];
 
         livingCells += i + width - 1 >= surf ? 0 : map[i + width - 1];
         livingCells += i + width >= surf ? 0 : map[i + width];
         livingCells += i + width + 1 >= surf ? 0 : map[i + width + 1];
 
-        (!map[i] & livingCells == 3) > newMap[i] = 1;
-        (map[i] & (livingCells <= 1 | livingCells >= 4)) > newMap[i] = 0;
+        (map[i]) {
+            (livingCells == 2 | livingCells == 3) > newMap[i] = 1;
+        } {
+            (livingCells == 3) > newMap[i] = 1;
+        }
     }
-    (0..(surf-1)), i -> map[i] = newMap[i];
+
+    map = newMap;
 }
 
 true -> {
     renderMap ();
-
     updateCells ();
 }
+
+
+<*
+createMap (width, height) {
+    var map = list (width);
+    map, x -> map[x] = list (height);
+    ret map;
+}
+
+val width  = 100;
+val height = 100;
+
+var map = createMap (width, height);
+
+(0..width), x ->
+    (0..height), y ->
+        map[x][y] = rand (2);
+
+renderMap () {
+    clear ();
+    (0..height), y -> {
+        (0..width), x -> O: (map[x])[y] ? "██" : "  ";
+        O: '\n';
+    }
+}
+
+updateMap () {
+    var newMap = createMap (width, height);
+    (0..height), y -> {
+        (0..width), x -> {
+            var livingCells = 0;
+            livingCells += x > 0 ? (map[x-1])[y] : 0;
+            livingCells += x < width-1 ? (map[x+1])[y] : 0;
+
+            livingCells += y > 0 ? (map[x])[y-1] : 0;
+            livingCells += y < height-1 ? (map[x])[y+1] : 0;
+
+            livingCells += y > 0 & x > 0 ? (map[x-1])[y-1] : 0;
+            livingCells += y > 0 & x < width-1 ? (map[x+1])[y-1] : 0;
+
+            livingCells += y < height-1 & x > 0 ? (map[x-1])[y+1] : 0;
+            livingCells += y < height-1 & x < width-1 ? (map[x+1])[y+1] : 0;
+
+            
+            ((map[x])[y]) {
+                (livingCells == 2 | livingCells == 3) > newMap[x][y] = 1;
+            } {
+                (livingCells == 3) > newMap[x][y] = 1;
+            }
+        }
+    }
+    map = newMap;
+}
+
+true -> {
+    renderMap ();
+    updateMap ();
+}
+
+*>

@@ -78,6 +78,24 @@ Value kl_lib_std_range (int argc, Value* argv) {
     return VALUE_LIST (values, size);
 }
 
+Value kl_lib_std_until (int argc, Value* argv) {
+    int from = argc <= 0 ? 0 : NUMBER (argv[0]);
+    int to   = argc <= 1 ? 0 : NUMBER (argv[1]);
+    int step = argc <= 2 ? 1 : NUMBER (argv[2]);
+    int size = abs (from - to) / step;
+
+    Value* values = malloc (sizeof (Value) * size);
+
+    int i;
+
+    if (from < to) for (i = 0; i < size; ++ i)
+        values[i] = VALUE_INT (i * step + from);
+    else if (from > to) for (i = 0; i < size; ++ i)
+        values[i] = VALUE_INT (from - i * step);
+
+    return VALUE_LIST (values, size);
+}
+
 Value kl_lib_std_readFile (int argc, Value* argv) {
     if (argc <= 1 || argv[0].data_type != DT_STRING || argv[1].data_type != DT_INT)
         return VALUE_INT (false);
@@ -130,5 +148,6 @@ void kl_lib_std_init () {
     kl_lib_add_function ("readFile",    kl_lib_std_readFile);
     kl_lib_add_function ("list",        kl_lib_std_list);
     kl_lib_add_function ("range",       kl_lib_std_range);
+    kl_lib_add_function ("until",       kl_lib_std_until);
     kl_lib_add_function ("rand",        kl_lib_std_rand);
 }

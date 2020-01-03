@@ -1,8 +1,69 @@
 #include "util.h"
+#include "multisearcher.h"
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <stdio.h>
+#include <math.h>
+
+
+void error (const char* msg, ...)
+{
+    int line_number = cms_get_current_line_number ();
+    int nDigits = floor (log10 (abs (line_number))) + 1;
+
+    if (line_number <= 0)
+    {
+        printf ("Line Number cannot be 0 or smaller!\n");
+        exit (EXIT_FAILURE);
+    }
+
+    char* arrow = malloc (nDigits * 3 + 1);
+    int i;
+
+    *arrow = '\0';
+    for (i = 0; i < nDigits; ++ i)
+        strcat (arrow, "─");
+    arrow[i * 3] = '\0';
+
+    char* line = cms_get_current_line ();
+    kl_util_trim (&line);
+
+    va_list arg;
+    va_start (arg, msg);
+
+    fprintf (stderr, "\x1b[90m[\x1b[33m%d\x1b[90m]\x1b[92m─►\x1b[93m %s\n \x1b[92m└%s─► \x1b[91m(ERR) ", line_number, line, arrow);
+    vfprintf (stderr, msg, arg);
+    fprintf (stderr, "\x1b[0m\n");
+
+    va_end (arg);
+    free (arrow);
+
+    exit (EXIT_SUCCESS);
+}
+
+void warning (const char* msg, const void* variablen, ...)
+{
+    int line_number = cms_get_current_line_number ();
+    int nDigits = floor (log10 (abs (line_number))) + 1;
+
+    char* arrow = malloc (nDigits * 3 + 1);
+    int i;
+
+    *arrow = '\0';
+    for (i = 0; i < nDigits; ++ i)
+        strcat (arrow, "─");
+    arrow[i * 3 + 1] = '\0';
+
+    char* line = cms_get_current_line ();
+    kl_util_trim (&line);
+    fprintf (stderr, "\x1b[90m[\x1b[33m%d\x1b[90m]\x1b[92m─►\x1b[93m %s\n \x1b[92m└%s─► \x1b[95m(WARN) ", line_number, line, arrow);
+    fprintf (stderr, msg, variablen);
+    fprintf (stderr, "\x1b[0m\n");
+
+    free (arrow);
+}
 
 char* kl_util_read_file (const char* filepath)
 {
@@ -32,8 +93,13 @@ char* kl_util_read_file (const char* filepath)
 
 void kl_util_trim_front_end (char** str)
 {
+    size_t size = strlen (*str);
+
+    if (size <= 1)
+        return;
+
+    (*str)[size - 1] = '\0';
     (*str) ++;
-    (*str)[strlen (*str) - 1] = '\0';
 }
 
 bool kl_util_has_illigal_ascii (const char* text)

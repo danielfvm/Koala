@@ -10,6 +10,10 @@
 /* Used in ´kl_util_find_next_bracket´ if nothing was found */
 #define NOT_FOUND -1
 
+void error (const char* msg, ...);
+
+void warning (const char* msg, const void* variablen, ...);
+
 /* Checks if str contains not ´0..9 A..Z a..z _ .´ */
 bool   kl_util_has_illigal_ascii (const char* text);
 

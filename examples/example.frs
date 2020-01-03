@@ -1,5 +1,7 @@
-inc "examples/std.frs";
 
+** inc "examples/std.frs";
+
+<*
 ::mul(l, x) {
     l, i -> l[i] = l[i] * x;
     ret l;
@@ -17,6 +19,25 @@ myList = myList::forEach((x) {
 });
 
 O: myList, '\n';
+
+
+*>
+
+
+
+
+true -> {
+    var x = [43, 12];
+
+    x = 12;
+
+    x = [13, 3, 2];
+
+    O: x, '\n';
+
+}
+
+
 
 
 

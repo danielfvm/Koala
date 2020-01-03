@@ -36,6 +36,7 @@ enum Execution
     POP,
     IND,
     IND_SET,
+    IND_IND_SET,
     CMP,
     NCMP,
     READ_CHAR,
@@ -62,7 +63,7 @@ enum DataType
 typedef struct
 {
     byte   data_type;
-    size_t size;        // used in VALUE_LIST as Size
+    int    size;        // used in VALUE_LIST as Size
     void*  value;
 } Value;
 
@@ -134,6 +135,8 @@ Register* REGISTER_SSET (Value m_index, Value m_value);
 Register* REGISTER_IND (Value m_index, Value m_value, Value m_value_index);
 
 Register* REGISTER_IND_SET (Value m_value, Value m_index, Value m_set);
+
+Register* REGISTER_IND_IND_SET (Value m_value, Value m_index1, Value m_index2, Value m_set);
 
 Register* REGISTER_EQ (Value m_value1, Value m_value2, Value not_position);
 

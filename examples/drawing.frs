@@ -28,12 +28,12 @@ init ()
     ansi.moveTo (1, MAX_HEIGHT + 1 + 2);
     O: "██" * (MAX_WIDTH + 2);
 
-    (1..MAX_HEIGHT + 2), y -> {
-        ansi.moveTo (1, y);
+    (1...MAX_HEIGHT + 2), y -> {
+        ansi.moveTo (1, y + 1);
         O: "██";
     };
 
-    (0..MAX_HEIGHT + 2), y -> {
+    (0...MAX_HEIGHT + 2), y -> {
         ansi.moveTo (MAX_WIDTH * 2 + 5, y + 1);
         O: "██";
     };

@@ -1,7 +1,4 @@
 #include "interpreter.h"
-#include "util.h"
-
-#include <stdarg.h>
 
 typedef struct
 {
@@ -10,8 +7,6 @@ typedef struct
     char*  function_path;
     char*  name;
 } Variable;
-
-void error (const char* msg, ...);
 
 void  kl_parse_compiler_init ();
 
