@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define KOALA_VERSION "0.3-a1"
+#define KOALA_VERSION "0.3-b2"
 
 #include "multisearcher.h"
 #include "interpreter.h"

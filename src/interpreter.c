@@ -506,7 +506,7 @@ extern inline Value kl_intp_get_memory_value (Value value)
             error ("Pointing on ´%p´ doesn't exist as Register!", (int) (intptr_t) value.value);
         if (register_list[(intptr_t) value.value]->reg_type != ALLOC)
             error ("Register ´%p´ isn't a Memory Register!", (int) (intptr_t) value.value);
-          
+         
         Value v1 = register_list[(intptr_t) value.value]->reg_values[0];
         if (value.data_type == DT_POINTER)
             return v1;
@@ -597,13 +597,15 @@ void print (Value value)
 
 bool equ (Value v_one, Value v_two)
 {
-    if ((kl_intp_get_data_type (v_one) == DT_STRING && kl_intp_get_data_type (v_two) != DT_STRING) || 
-        (kl_intp_get_data_type (v_two) == DT_STRING && kl_intp_get_data_type (v_one) != DT_STRING))
+    byte d_one = kl_intp_get_data_type (v_one);
+    byte d_two = kl_intp_get_data_type (v_two);
+
+    if ((d_one == DT_STRING && d_two != DT_STRING) || 
+        (d_two == DT_STRING && d_one != DT_STRING))
         return false;
-    else if (kl_intp_get_data_type (v_one) == DT_STRING && kl_intp_get_data_type (v_two) == DT_STRING)
+    else if (d_one == DT_STRING && d_two == DT_STRING)
         return !strcmp (kl_intp_get_memory (v_one), kl_intp_get_memory (v_two));
-    else
-        return kl_intp_get_as_number (v_one) == kl_intp_get_as_number (v_two);
+    return kl_intp_get_as_number (v_one) == kl_intp_get_as_number (v_two);
 }
 
 void free_value (Value* value)
@@ -657,9 +659,6 @@ void alloc (Value* save, Value stored, Value sset)
             Value value = ((Value*) def_value)[m_i];
             (((Value*) save->value)[m_i]) = VALUE_INT (0);
             alloc (&(((Value*) save->value)[m_i]), value, VALUE_INT (false));
-            //((Value*) save->value)[m_i].data_type = kl_intp_get_data_type (value);
-            //((Value*) save->value)[m_i].value     = kl_intp_get_memory    (value);
-            //((Value*) save->value)[m_i].size      = kl_intp_get_size      (value);
         }
     }
     else
@@ -897,9 +896,11 @@ int kl_intp_run (Registry* _register_list)
                         reg->reg_values[1],
                         VALUE_INT (false)
                     );
+/*
                     ((Value*) v_list->value)[v_list->size - 1].data_type = kl_intp_get_data_type (reg->reg_values[1]); // TODO: Copy 
                     ((Value*) v_list->value)[v_list->size - 1].value     = kl_intp_get_memory    (reg->reg_values[1]); // TODO: Copy 
                     ((Value*) v_list->value)[v_list->size - 1].size      = kl_intp_get_size      (reg->reg_values[1]); // TODO: Copy 
+*/
                 }
                 else
                 {
@@ -1171,6 +1172,8 @@ int kl_intp_run (Registry* _register_list)
     // TODO: free memory of Value STRING, LIST, FLOAT.
     for (size_t i = 0; register_list[i]; ++ i)
     {
+        if (register_list[i]->reg_type == ALLOC)
+            free_value (&register_list[i]->reg_values[0]);
         free (register_list[i]->reg_values);
         free (register_list[i]);
     }

@@ -1,4 +1,4 @@
-inc "examples/std.frs";
+** inc "examples/std.frs";
 
 <*
 ::mul(l, x) {
@@ -22,33 +22,35 @@ O: myList, '\n';
 
 *>
 
+<*
 ::filter(l, f) {
     var nL = [];
-    for (0, len (l) - 1, (i) {
-        !(f(l[i])) > nL += l[i];
-    });
+    (0..len (l)), i -> {
+        !(f (l[i])) > nL += l[i];
+    }
     ret nL;
 }
 
-::forEach(l, f) {
+::forEach (l, f) {
     l, i -> f (l[i]);
     ret l;
 }
 
-::turn(l) {
+::turn (l) {
     val ll = len (l) - 1;
     var nl = [];
     l, i -> nl += l[ll - i];
     ret nl;
 }
+*>
 
-::biggest(l) {
+::biggest (l) {
     (len (l) <= 0) > ret 0;
     var b = l[0];
     var bi = 0;
-    l, i -> {
-        (l[i] > b) {
-            b = l[i];
+    l, (i, v) -> {
+        (v > b) {
+            b = v;
             bi = i;
         }
     }

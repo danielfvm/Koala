@@ -44,7 +44,7 @@ void cms_add (char* syntax, CmsCallback callback, int options)
         cms_tmp_template->list[id].options   = options;
         cms_tmp_template->list[id].data_size = 0;
 
-        for (size_t i = 0; i < strlen (syntax); ++ i)
+        for (size_t i = 0; syntax[i] != '\0'; ++ i)
             if (syntax[i] == '$' || syntax[i] == '#' || syntax[i] == '%')
                 cms_tmp_template->list[id].data_size ++;
     }
