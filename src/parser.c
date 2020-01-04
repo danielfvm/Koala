@@ -330,7 +330,7 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
             strcpy (func_args = realloc (func_args, strlen (data_args) + 1), data_args);
 
             // New function name
-            func_name += strlen (func_name) - dpoint - 2;
+            func_name += strlen (data_name);
 
             free (data_name);
             free (data_args);

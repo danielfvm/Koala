@@ -1,5 +1,4 @@
-
-** inc "examples/std.frs";
+inc "examples/std.frs";
 
 <*
 ::mul(l, x) {
@@ -23,23 +22,22 @@ O: myList, '\n';
 
 *>
 
-
-
-
-true -> {
-    var x = [43, 12];
-
-    x = 12;
-
-    x = [13, 3, 2];
-
-    O: x, '\n';
-
+::filter(l, f) {
+    var nL = [];
+    for (0, len (l) - 1, (i) {
+        !(f(l[i])) > nL += l[i];
+    });
+    ret nL;
 }
 
 
+var myList = 0..10;
 
-
+O: myList::filter((x) {
+    ret x % 2;
+})::filter((x) {
+    ret x == 0;
+}), '\n';
 
 
 

@@ -1,10 +1,11 @@
 inc "examples/std.frs";
 
-baseToStr (text, base) { 
+baseToStr (text, base) {
     val st = base == 16 ? 2 : (base == 8 ? 3 : 8);
     ret forEdit (0, len (text) / st - 1, STR, (i, edit_text) {
         ~edit_text += char (toNum (substr (text, i * st, i * st + st), base));
     });
 }
 
-O: baseToStr (read (STR), read (INT)), '\n';
+O: baseToStr ("48616C6C6F2057656C74210A0", read (INT)), '\n';
+
