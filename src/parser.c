@@ -307,45 +307,8 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
     }
 
     // TODO: WRONG POSITION FOR ARGUMENTS
-    Value create_call_function (char* func_name, char* func_args, Value (kl_parse_convert_to_value) (char* text))
+    Value create_call_function_args (char* func_name, Value* args, size_t length, Value (kl_parse_convert_to_value) (char* text))
     {
-        size_t dpoint = kl_util_contains (func_name, ':');
-        int kl_lib_id = UNKNOWN;
-
-        if (dpoint && func_name[dpoint] == ':')
-        {
-            char* data_name = kl_util_substr (func_name, 0, dpoint - 1);
-            char* data_args = malloc (strlen (data_name) + 1 + strlen (func_args) + 1);
-            
-            *data_args = '\0';
-            strcat (data_args, data_name);
-
-            if (func_args[0] != '\0')
-            {
-                strcat (data_args, ",");
-                strcat (data_args, func_args);
-            }
-
-            // New function arguments
-            strcpy (func_args = realloc (func_args, strlen (data_args) + 1), data_args);
-
-            // New function name
-            func_name += strlen (data_name);
-
-            free (data_name);
-            free (data_args);
-        }
-
-        // Check if function exist
-        if ((kl_lib_id = kl_lib_get_function_by_name (func_name)) != UNKNOWN)
-            return call_lib_function (kl_lib_id, func_args, kl_parse_convert_to_value);
-
-        char** args;
-        size_t length = 0; 
-
-        if (func_args != NULL && func_args[0] != '\0')
-            length = kl_util_split (func_args, ',', &args);
-
         Value position = kl_parse_convert_to_value (func_name); 
 
         size_t m_tmp_var;
@@ -359,7 +322,7 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
             func_args_positions[i] = m_tmp_var = kl_intp_register_add (&register_list, REGISTER_ALLOC (position));
             kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_tmp_var), VALUE_INT (i + 2)));
             kl_intp_register_add (&register_list, REGISTER_PUSH (POINTER_POINTER (m_tmp_var))); // pushes variable to stack, used later to reset variable
-            func_args_values[i] = kl_intp_register_add (&register_list, REGISTER_ALLOC (kl_parse_convert_to_value (args[i])));
+            func_args_values[i] = kl_intp_register_add (&register_list, REGISTER_ALLOC (args[i]));
         }
 
         for (size_t i = 0; i < length; ++ i)
@@ -385,7 +348,74 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         kl_intp_register_add (&register_list, REGISTER_ADD (VALUE_INT (m_tmp_var), VALUE_INT (1)));
         m_tmp_var = kl_intp_register_add (&register_list, REGISTER_ALLOC (POINTER_POINTER (m_tmp_var)));
 
+        free (args);
+
         return POINTER (m_tmp_var);
+    }
+
+    Value create_call_function (char* func_name, char* func_args, Value (kl_parse_convert_to_value) (char* text))
+    {
+        size_t fstream = kl_util_contains (func_name, ':');
+
+        if (fstream && func_name[fstream] == ':')
+        {
+            char* data_name = kl_util_substr (func_name, 0, fstream - 1);
+            char* data_args = malloc (strlen (data_name) + 1 + strlen (func_args) + 1);
+            
+            *data_args = '\0';
+            strcat (data_args, data_name);
+
+            if (func_args[0] != '\0')
+            {
+                strcat (data_args, ",");
+                strcat (data_args, func_args);
+            }
+
+            // New function arguments
+            strcpy (func_args = realloc (func_args, strlen (data_args) + 1), data_args);
+
+            // New function name
+            func_name += strlen (data_name);
+
+            free (data_name);
+            free (data_args);
+        }
+
+        int kl_lib_id = UNKNOWN;
+
+        // Check if function exist
+        if ((kl_lib_id = kl_lib_get_function_by_name (func_name)) != UNKNOWN)
+            return call_lib_function (kl_lib_id, func_args, kl_parse_convert_to_value);
+
+        char** args;
+        size_t length = 0; 
+
+        if (func_args != NULL && func_args[0] != '\0')
+            length = kl_util_split (func_args, ',', &args);
+
+        Value* values = malloc (sizeof (Value) * length);
+
+        for (size_t i = 0; i < length; ++ i)
+            values[i] = kl_parse_convert_to_value (args[i]);
+
+        return create_call_function_args (func_name, values, length, kl_parse_convert_to_value);
+    }
+
+    Value create_call_function_value (char* func_name, Value arg_value, char* func_args, Value (kl_parse_convert_to_value) (char* text))
+    {
+        char** args = NULL;
+        size_t length = 0; 
+
+        if (func_args != NULL && func_args[0] != '\0')
+            length = kl_util_split (func_args, ',', &args);     // +1 for ´arg_value´
+
+        Value* values = malloc (sizeof (Value) * length);
+
+        values[0] = arg_value;
+
+        for (size_t i = 0; i < length; ++ i)
+            values[i + 1] = kl_parse_convert_to_value (args[i]);
+        return create_call_function_args (func_name, values, length + 1, kl_parse_convert_to_value);
     }
 
     bool is_illegal_name (const char* name)
@@ -1206,6 +1236,43 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         warning ("Missing Brackets around statement. Statement will be ignored.\n", NULL);
     }
 
+    void sub_fstream (Value value, char* code)
+    {
+        kl_util_trim (&code);
+
+        int start_args = kl_util_contains (code, '(');
+
+        if (!start_args)
+            return;
+
+        int end_args = kl_util_find_next_bracket (start_args - 1, code);
+
+        char* fargs = kl_util_substr (code, start_args, end_args);
+        char* _fname = kl_util_substr (code, 0, start_args - 1);
+
+        kl_util_trim (&_fname);
+
+        char* fname = malloc (strlen (_fname) + 2 + 1);
+        
+        sprintf (fname, "::%s", _fname);
+
+        Value ret_value = create_call_function_value (fname, value, fargs, kl_parse_convert_to_value);
+
+        free (_fname);
+        free (fname);
+        free (fargs);
+
+        int start_new_stream = kl_util_contains (code, ':');
+        
+        if (start_new_stream && code[start_new_stream] == ':')
+            sub_fstream (ret_value, code + start_new_stream + 1);
+    }
+
+    void c_fstream (CmsData* data)
+    {
+        sub_fstream (kl_parse_convert_to_value (data[0]), data[1]);
+    }
+
     // var & val getting recocnised even if char is with out space next to it!
     cms_create ( &cms_template, CMS_LIST ( {
         cms_add ("inc %;",              c_include,      CMS_IGNORE_UPPER_LOWER_CASE | CMS_IGNORE_SPACING_LENGTH | CMS_USE_BRACKET_SEARCH_ALGORITHM);
@@ -1225,6 +1292,9 @@ int kl_parse_compile (char* code, Variable** variables, size_t* pre_variable_cou
         cms_add ("#, # -> { % }",       c_loop_indexing,         CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("( % ), # -> % ;",     c_loop_indexing_short,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("#, # -> % ;",         c_loop_indexing_short,   CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+
+        cms_add ("( % ) :: % ;",        c_fstream,      CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
+        cms_add ("# :: % ;",            c_fstream,      CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
 
         cms_add ("# ( % ) { % }",       c_function,     CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);
         cms_add ("# ( % ) > % ;",       c_function_short,    CMS_IGNORE_SPACING | CMS_USE_BRACKET_SEARCH_ALGORITHM);

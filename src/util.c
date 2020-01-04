@@ -448,6 +448,7 @@ int kl_util_split (char* buffer, char delim, char*** output)
 
     // Set splited substring in output and trim it
     (*output)[partCount] = lastPos;
+//    (*output)[partCount][ptr-lastPos] = '\0';
     kl_util_trim (&(*output)[partCount]);
 
     // Return ´partCount´ used to iterate through substr list

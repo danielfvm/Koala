@@ -23,16 +23,13 @@ updateCells () {
     var livingCells = 0;
 
     map, i -> {
-        newMap[i] = 0;
         livingCells = 0;
 
         livingCells += i - width - 1 < 0 ? 0 : map[i - width - 1];
         livingCells += i - width < 0 ? 0 : map[i - width];
         livingCells += i - width + 1 < 0 ? 0 : map[i - width + 1];
-
         livingCells += i-1 <  int (i / width) * width ? 0 : map[i - 1];
         livingCells += i+1 >= int (i / width + 1) * width ? 0 : map[i + 1];
-
         livingCells += i + width - 1 >= surf ? 0 : map[i + width - 1];
         livingCells += i + width >= surf ? 0 : map[i + width];
         livingCells += i + width + 1 >= surf ? 0 : map[i + width + 1];
@@ -51,6 +48,32 @@ true -> {
     renderMap ();
     updateCells ();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 <*

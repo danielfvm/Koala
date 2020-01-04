@@ -30,15 +30,66 @@ O: myList, '\n';
     ret nL;
 }
 
+::forEach(l, f) {
+    l, i -> f (l[i]);
+    ret l;
+}
 
-var myList = 0..10;
+::turn(l) {
+    val ll = len (l) - 1;
+    var nl = [];
+    l, i -> nl += l[ll - i];
+    ret nl;
+}
 
+::biggest(l) {
+    (len (l) <= 0) > ret 0;
+    var b = l[0];
+    var bi = 0;
+    l, i -> {
+        (l[i] > b) {
+            b = l[i];
+            bi = i;
+        }
+    }
+    ret bi;
+}
+
+::sort(l) {
+    var nl = [];
+    var bi = 0;
+
+    l, i -> {
+        bi = l::biggest();
+        nl += l[bi];
+        l[bi] = 0;
+    }
+
+    ret nl;
+}
+
+<*
+(0..10)::filter ((x) {
+    ret x % 2;
+}) :: forEach ((x) {
+    O: '<', x, '\n';
+})::turn()::forEach ((x) {
+    O: '>', x, '\n';
+});
+*>
+
+var ml = list (1000);
+ml, i -> ml[i] = rand (1000);
+O: ml::sort(), '\n';
+
+
+<*
 O: myList::filter((x) {
     ret x % 2;
 })::filter((x) {
     ret x == 0;
 }), '\n';
-
+*>
 
 
 
